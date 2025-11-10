@@ -57,8 +57,9 @@ Schematic is a Prisma enhancement tool that adds database-provider-specific feat
 
 #### Schematic Handles
 
-- **Auto-optimizations:**
-  - Indexes on FK columns (Prisma doesn't create these on PostgreSQL)
+- **Auto-optimizations (configurable):**
+  - Indexes on FK columns (opt-in via config, critical for PostgreSQL)
+  - Indexes on enum columns (opt-in via config)
   - Composite indexes for common patterns (future)
 - **Features Prisma doesn't support:**
   - Partial indexes (`WHERE` clauses)
