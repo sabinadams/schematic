@@ -1,0 +1,13 @@
+import { DMMF } from '@prisma/generator-helper';
+
+interface _ExtendedField extends DMMF.Field {}
+interface _ExtendedIndex extends DMMF.Index {}
+
+interface _ExtendedModel extends DMMF.Model {
+	fields: _ExtendedField[];
+}
+
+export interface _ExtendedDatamodel extends DMMF.Datamodel {
+	indexes: _ExtendedIndex[];
+	models: _ExtendedModel[];
+}
