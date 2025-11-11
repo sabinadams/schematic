@@ -13,7 +13,7 @@ export async function generate(options: GeneratorOptions) {
 	let previousState;
 	if (stateFilePath) {
 		const resolvedPath = resolveFilePath(options.schemaPath, stateFilePath);
-		logger.info(`Fetching existing state from ${resolvedPath}`);
+		logger.info(`Loading existing state from: ${resolvedPath}`);
 
 		const state = await resolveAndLoadFile({
 			basePath: options.schemaPath,
@@ -21,12 +21,12 @@ export async function generate(options: GeneratorOptions) {
 			parse: 'json',
 		});
 
-		if (state) {
-			logger.info('State loaded and parsed successfully');
-			previousState = state;
-		} else {
-			logger.warn(`Could not read or parse state file at ${resolvedPath}`);
+		if (!state) {
+			throw new Error(`Could not load state file: ${resolvedPath}`);
 		}
+
+		logger.info('Previous state loaded successfully');
+		previousState = state;
 	}
 
 	if (incomingState && previousState) {
