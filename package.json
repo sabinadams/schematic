@@ -33,7 +33,7 @@
 		"@prisma/internals": "^6.19.0"
 	},
 	"devDependencies": {
-		"@types/node": "^22.10.1",
+		"@types/node": "^24.0.0",
 		"@typescript-eslint/eslint-plugin": "^8.46.3",
 		"@typescript-eslint/parser": "^8.46.3",
 		"@vitest/ui": "^4.0.8",
