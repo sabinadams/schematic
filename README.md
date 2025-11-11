@@ -84,9 +84,10 @@ CREATE INDEX IF NOT EXISTS "Post_title_search_idx"
 ### ✅ Production-Ready
 
 - **Idempotent SQL**: Safe to run multiple times (`IF NOT EXISTS`)
-- **Git-friendly**: State file tracks desired features
+- **Automatic cleanup**: Removes indexes when you delete annotations
+- **Git-friendly**: State file tracks desired features (or use cloud storage)
 - **CI/CD ready**: Validation command for pre-merge checks
-- **No introspection**: Simple, fast, provider-agnostic
+- **No introspection needed**: Simple, fast, provider-agnostic
 
 ---
 
@@ -438,25 +439,70 @@ Prisma may warn about indexes not in your schema. This is expected—Schematic m
 
 To silence warnings, you can add regular `@@index` to your schema for the same columns (Prisma and Schematic will create the same index).
 
+### What happens when I remove an annotation?
+
+**Automatic cleanup!** Schematic compares the old state with the new schema and generates `DROP` statements.
+
+```prisma
+// Remove this annotation:
+/// @schematic.partialIndex(columns: ["email"], where: "active = true")
+```
+
+Next time you run `schematic enhance`, it automatically adds:
+
+```sql
+DROP INDEX IF EXISTS "User_email_active_idx";
+```
+
+The index is cleanly removed from your database.
+
+### Can I store state in the cloud instead of git?
+
+**Yes! (Coming in Phase 7)** Configure cloud storage:
+
+```prisma
+generator schematic {
+  provider     = "schematic"
+  stateStorage = "gcp"
+  stateBucket  = "my-company-bucket"
+  stateKey     = "project/schematic-state.json"
+}
+```
+
+**Benefits:**
+
+- No merge conflicts
+- Centralized for distributed teams
+- State locking for concurrent operations
+- Cleaner git history
+
+**Supported:**
+
+- ✅ Google Cloud Storage (GCP)
+- 🔜 AWS S3 (future)
+- 🔜 Azure Blob Storage (future)
+
 ---
 
 ## Roadmap
 
 See [docs/roadmap.md](./docs/roadmap.md) for detailed implementation plan.
 
-**MVP (Phase 1):**
+**MVP (Phase 1-2):**
 
-- ✅ Auto-index foreign keys
-- ✅ State file generation
-- ✅ `enhance` command
+- ✅ Auto-index foreign keys (configurable)
+- ✅ State file generation with schema hash
+- ✅ `enhance` command with automatic cleanup
 - ✅ Partial index support
+- ✅ Automatic removal of deleted features
 
 **Future:**
 
-- Expression indexes
-- Check constraints
-- Triggers and functions
-- Introspection/drift detection
+- Expression indexes and GIN/GIST indexes
+- Check constraints and triggers
+- Cloud state storage (GCP, S3, Azure)
+- State locking for concurrent operations
+- Optional introspection/drift detection
 - Visual migration preview
 
 ---

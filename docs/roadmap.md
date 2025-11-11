@@ -208,10 +208,48 @@ npx prisma migrate deploy
 
 ### State File Management
 
-- ✅ **Commit to git** (like `package-lock.json`)
+- ✅ **Commit to git** (like `package-lock.json`) - recommended for local storage
+- ✅ **Or store in cloud** (GCP, S3, Azure) - useful for distributed teams
 - ✅ **Regenerated on every `prisma generate`**
 - ✅ **Merge conflicts:** Just run `npx prisma generate` to regenerate
 - ✅ **CI validation:** Check hash matches schema
+
+### Automatic Removal of Orphaned Features
+
+When you remove an annotation or disable auto-indexing, Schematic automatically detects it:
+
+**How it works:**
+
+1. `schematic enhance` loads the **previous state** (from git or cloud storage)
+2. Generates **new state** from current schema
+3. **Compares** old vs new to detect removals
+4. Generates `DROP INDEX` statements for removed features
+5. Appends to migration file
+
+**Example:**
+
+```prisma
+// Before: Had partial index
+/// @schematic.partialIndex(columns: ["status"], where: "status = 'active'")
+
+// After: Removed annotation
+// (deleted)
+```
+
+**Generated migration includes:**
+
+```sql
+-- Schematic enhancements
+DROP INDEX IF EXISTS "Post_status_active_idx";
+```
+
+**Previous state is read from:**
+
+- Git history (`git show HEAD:.schematic-state.json`) for local storage
+- Cloud storage API for remote storage
+- Fallback to disk if available
+
+This ensures indexes/constraints are properly cleaned up when you change your schema.
 
 ## Schema Annotations
 
@@ -383,10 +421,14 @@ PR #1: Add User.email          PR #2: Add Post.status
 
 - [ ] `schematic enhance` command
 - [ ] Find most recent migration file
+- [ ] Load previous state file (from disk or git)
+- [ ] Generate new state from current schema
+- [ ] Compare old vs new state (detect additions/removals)
+- [ ] Generate SQL for new indexes/constraints (CREATE)
+- [ ] Generate SQL for removed indexes/constraints (DROP)
 - [ ] Append Schematic SQL to migration file
-- [ ] Generate SQL for auto-indexes
-- [ ] Generate SQL from annotations
 - [ ] Clear separation comments in migration file
+- [ ] Update state file on disk
 
 ### Phase 3: Schema Annotations
 
@@ -417,14 +459,35 @@ PR #1: Add User.email          PR #2: Add Post.status
 - [ ] Configurable auto-indexing rules
 - [ ] Check constraints
 
-### Phase 7: Optional Introspection
+### Phase 7: Cloud State Storage
+
+- [ ] Support remote state storage
+- [ ] GCP Cloud Storage backend
+- [ ] AWS S3 backend (future)
+- [ ] Azure Blob Storage backend (future)
+- [ ] Configuration for remote state
+- [ ] Fallback to local state if remote unavailable
+- [ ] State locking for concurrent operations
+
+**Configuration:**
+
+```prisma
+generator schematic {
+  provider      = "schematic"
+  stateStorage  = "gcp"  // "local" | "gcp" | "s3" | "azure"
+  stateBucket   = "my-bucket-name"
+  stateKey      = "project/schematic-state.json"
+}
+```
+
+### Phase 8: Optional Introspection
 
 - [ ] `schematic clean` command
 - [ ] Per-provider introspection
 - [ ] Orphaned index detection
 - [ ] Drift detection
 
-### Phase 8: Documentation & Polish
+### Phase 9: Documentation & Polish
 
 - [ ] README with setup guide
 - [ ] Example schemas
@@ -455,13 +518,36 @@ PR #1: Add User.email          PR #2: Add Post.status
 
 **Alternative:** `.gitignore` the state file
 
-**Chosen:** Commit it because:
+**Chosen:** Commit it (or store in cloud) because:
 
 - Can review changes in PRs
 - Deterministic (same schema = same state)
 - CI can validate
 - No surprises in production
 - Similar to `package-lock.json`
+- Enables automatic removal of orphaned indexes
+
+### Cloud State Storage vs Git
+
+**Local (Git-committed):**
+
+- ✅ Simple - no additional infrastructure
+- ✅ Version history built-in
+- ✅ Works offline
+- ⚠️ State file in every commit
+- ⚠️ Merge conflicts possible
+
+**Cloud (GCP/S3/Azure):**
+
+- ✅ Centralized state for distributed teams
+- ✅ No merge conflicts
+- ✅ State locking for concurrent operations
+- ✅ Keeps git history cleaner
+- ⚠️ Requires cloud credentials
+- ⚠️ Network dependency
+- ⚠️ Additional cost
+
+**Recommendation:** Start with git-committed, add cloud storage later if needed for large teams.
 
 ### Why No Introspection Initially?
 
