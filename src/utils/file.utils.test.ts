@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs/promises';
 import path from 'path';
-import { resolveAndLoadFile, resolveFilePath } from '@utils/file.utils';
+import { resolveAndLoadFile, resolveFilePath } from '@/utils/file.utils';
 
 vi.mock('fs/promises');
 

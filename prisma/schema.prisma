@@ -3,9 +3,10 @@ generator client {
 }
 
 generator schematic {
-    output        = "../generated"
-    provider      = "node ./dist/generator.js"
-    stateFilePath = "./.schematic-state.json"
+    output               = "../generated"
+    provider             = "node ./dist/generator.js"
+    stateFilePath        = "./.schematic-state.json"
+    autoIndexForeignKeys = true
 }
 
 datasource db {

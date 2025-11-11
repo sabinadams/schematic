@@ -16,8 +16,7 @@
 		"moduleResolution": "node",
 		"baseUrl": ".",
 		"paths": {
-			"@utils/*": ["src/utils/*"],
-			"@types/*": ["src/types/*"]
+			"@/*": ["src/*"]
 		}
 	},
 	"include": ["src/**/*"],

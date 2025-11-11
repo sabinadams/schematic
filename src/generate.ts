@@ -1,14 +1,15 @@
 import { GeneratorOptions } from '@prisma/generator-helper';
 import { logger } from '@prisma/internals';
 import fs from 'fs/promises';
-import { resolveAndLoadFile, resolveFilePath } from '@utils/file.utils';
+import { resolveAndLoadFile, resolveFilePath } from '@/utils/file.utils';
+import { SchematicGeneratorOptions } from '@/types/prisma.types';
 
-export async function generate(options: GeneratorOptions) {
+export async function generate(options: SchematicGeneratorOptions) {
 	const { dmmf: incomingState, generator } = options;
 	logger.info('New state generation started');
 
 	// Get the existing state file path if provided
-	const stateFilePath = generator.config.stateFilePath as string | undefined;
+	const stateFilePath = generator.config.stateFilePath;
 
 	let previousState;
 	if (stateFilePath) {
