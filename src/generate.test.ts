@@ -2,17 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GeneratorOptions } from '@prisma/generator-helper';
 import { generate } from './generate';
 import fs from 'fs/promises';
-import { getDMMF, logger } from '@prisma/internals';
+import { logger } from '@prisma/internals';
 
 vi.mock('fs/promises');
 vi.mock('@prisma/internals', async () => {
 	const actual = await vi.importActual('@prisma/internals');
 	return {
 		...actual,
-		getDMMF: vi.fn(),
 		logger: {
 			info: vi.fn(),
 			warn: vi.fn(),
+			error: vi.fn(),
 		},
 	};
 });
@@ -38,19 +38,6 @@ describe('generate', () => {
 							name: 'id',
 							type: 'Int',
 						},
-						{
-							hasDefaultValue: false,
-							isGenerated: false,
-							isId: false,
-							isList: false,
-							isReadOnly: false,
-							isRequired: true,
-							isUnique: false,
-							isUpdatedAt: false,
-							kind: 'scalar' as const,
-							name: 'name',
-							type: 'String',
-						},
 					],
 					isGenerated: false,
 					name: 'User',
@@ -75,7 +62,8 @@ describe('generate', () => {
 	};
 
 	const createMockOptions = (
-		config: Record<string, string> = {}
+		config: Record<string, string> = {},
+		outputPath?: string | null
 	): GeneratorOptions => ({
 		datamodel: '',
 		datasources: [],
@@ -84,10 +72,13 @@ describe('generate', () => {
 			binaryTargets: [],
 			config,
 			name: 'schematic',
-			output: {
-				fromEnvVar: null,
-				value: './generated',
-			},
+			output:
+				outputPath === null
+					? null
+					: {
+							fromEnvVar: null,
+							value: outputPath || './generated',
+						},
 			previewFeatures: [],
 			provider: {
 				fromEnvVar: null,
@@ -104,117 +95,128 @@ describe('generate', () => {
 		vi.clearAllMocks();
 	});
 
-	it('should generate files without a state file', async () => {
-		const options = createMockOptions();
+	describe('basic functionality', () => {
+		it('should start generation and create output directory', async () => {
+			const options = createMockOptions();
+			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 
-		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+			await generate(options);
 
-		await generate(options);
+			expect(logger.info).toHaveBeenCalledWith('New state generation started');
+			expect(fs.mkdir).toHaveBeenCalledWith('./generated', { recursive: true });
+		});
 
-		expect(logger.info).toHaveBeenCalledWith('New state generation started');
-		expect(fs.mkdir).toHaveBeenCalledWith('./generated', { recursive: true });
-	});
+		it('should use custom output directory when specified', async () => {
+			const options = createMockOptions({}, './custom-output');
+			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 
-	it('should create output directory if it does not exist', async () => {
-		const options = createMockOptions();
+			await generate(options);
 
-		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+			expect(fs.mkdir).toHaveBeenCalledWith('./custom-output', {
+				recursive: true,
+			});
+		});
 
-		await generate(options);
+		it('should use default output directory when null', async () => {
+			const options = createMockOptions({}, null);
+			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 
-		expect(fs.mkdir).toHaveBeenCalledWith('./generated', { recursive: true });
-	});
+			await generate(options);
 
-	it('should use custom output directory when specified', async () => {
-		const options = createMockOptions();
-		options.generator.output = {
-			fromEnvVar: null,
-			value: './custom-output',
-		};
-
-		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
-
-		await generate(options);
-
-		expect(fs.mkdir).toHaveBeenCalledWith('./custom-output', {
-			recursive: true,
+			expect(fs.mkdir).toHaveBeenCalledWith('./generated', {
+				recursive: true,
+			});
 		});
 	});
 
-	it('should attempt to load state file when stateFilePath is provided', async () => {
-		const options = createMockOptions({
-			stateFilePath: './state.json',
+	describe('state file loading', () => {
+		it('should not attempt to load state file when not configured', async () => {
+			const options = createMockOptions();
+			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+
+			await generate(options);
+
+			expect(fs.readFile).not.toHaveBeenCalled();
+			expect(logger.info).not.toHaveBeenCalledWith(
+				expect.stringContaining('Loading existing state from')
+			);
 		});
 
-		const mockStateJSON = JSON.stringify({ models: [] });
-		vi.mocked(fs.readFile).mockResolvedValue(mockStateJSON);
-		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+		it('should load state file when stateFilePath is provided', async () => {
+			const options = createMockOptions({
+				stateFilePath: './state.json',
+			});
 
-		await generate(options);
+			const mockState = { version: '1.0.0', indexes: [] };
+			vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(mockState));
+			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 
-		expect(logger.info).toHaveBeenCalledWith(
-			expect.stringContaining('Fetching existing state from')
-		);
-		expect(logger.info).toHaveBeenCalledWith(
-			'State loaded and parsed successfully'
-		);
-	});
+			await generate(options);
 
-	it('should warn when state file cannot be read', async () => {
-		const options = createMockOptions({
-			stateFilePath: './missing.json',
+			expect(logger.info).toHaveBeenCalledWith(
+				expect.stringContaining('Loading existing state from')
+			);
+			expect(logger.info).toHaveBeenCalledWith(
+				'Previous state loaded successfully'
+			);
 		});
 
-		vi.mocked(fs.readFile).mockRejectedValue(
-			new Error('ENOENT: no such file or directory')
-		);
-		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+		it('should throw error when state file cannot be loaded', async () => {
+			const options = createMockOptions({
+				stateFilePath: './missing.json',
+			});
 
-		await generate(options);
+			vi.mocked(fs.readFile).mockRejectedValue(
+				new Error('ENOENT: no such file or directory')
+			);
 
-		expect(logger.warn).toHaveBeenCalledWith(
-			expect.stringContaining('Could not read or parse state file at')
-		);
-	});
-
-	it('should compare states when both incoming and previous state exist', async () => {
-		const options = createMockOptions({
-			stateFilePath: './state.json',
+			await expect(generate(options)).rejects.toThrow(
+				'Could not load state file'
+			);
 		});
 
-		const mockStateJSON = JSON.stringify({ models: [] });
-		vi.mocked(fs.readFile).mockResolvedValue(mockStateJSON);
-		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+		it('should throw error when state file returns null', async () => {
+			const options = createMockOptions({
+				stateFilePath: './empty.json',
+			});
 
-		await generate(options);
+			// Simulate resolveAndLoadFile returning null
+			vi.mocked(fs.readFile).mockResolvedValue('');
 
-		expect(logger.info).toHaveBeenCalledWith(
-			'Comparing previous state to the new state'
-		);
+			await expect(generate(options)).rejects.toThrow(
+				'Could not load state file'
+			);
+		});
 	});
 
-	it('should not compare states when no previous state exists', async () => {
-		const options = createMockOptions();
+	describe('state comparison', () => {
+		it('should compare states when both exist', async () => {
+			const options = createMockOptions({
+				stateFilePath: './state.json',
+			});
 
-		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+			const mockState = { version: '1.0.0', indexes: [] };
+			vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(mockState));
+			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 
-		await generate(options);
+			await generate(options);
 
-		expect(logger.info).not.toHaveBeenCalledWith(
-			'Comparing previous state to the new state'
-		);
-	});
+			expect(logger.info).toHaveBeenCalledWith('Generating new state file');
+			expect(logger.info).toHaveBeenCalledWith(
+				'Comparing previous state to new state'
+			);
+		});
 
-	it('should use default output directory when not specified', async () => {
-		const options = createMockOptions();
-		options.generator.output = null as any;
+		it('should not compare when no previous state exists', async () => {
+			const options = createMockOptions();
+			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 
-		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+			await generate(options);
 
-		await generate(options);
-
-		expect(fs.mkdir).toHaveBeenCalledWith('./generated', {
-			recursive: true,
+			expect(logger.info).not.toHaveBeenCalledWith('Generating new state file');
+			expect(logger.info).not.toHaveBeenCalledWith(
+				'Comparing previous state to new state'
+			);
 		});
 	});
 });

@@ -1,7 +1,7 @@
 import { GeneratorOptions } from '@prisma/generator-helper';
 import { logger } from '@prisma/internals';
 import fs from 'fs/promises';
-import { resolveAndLoadFile, resolveFilePath } from './util/fileUtils';
+import { resolveAndLoadFile, resolveFilePath } from '@utils/file.utils';
 
 export async function generate(options: GeneratorOptions) {
 	const { dmmf: incomingState, generator } = options;
@@ -30,6 +30,8 @@ export async function generate(options: GeneratorOptions) {
 	}
 
 	if (incomingState && previousState) {
+		logger.info('Generating new state file');
+		// Generate the new state file
 		logger.info('Comparing previous state to new state');
 		// Compare the previous state to the new state
 	}

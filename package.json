@@ -1,52 +1,52 @@
 {
-  "name": "schematic",
-  "version": "1.0.0",
-  "description": "A Prisma generator",
-  "main": "dist/generator.js",
-  "bin": {
-    "schematic": "dist/generator.js"
-  },
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "prepack": "pnpm build",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
-    "typecheck": "tsc --noEmit"
-  },
-  "keywords": [
-    "prisma",
-    "prisma-generator",
-    "generator"
-  ],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@prisma/client": "6.19.0",
-    "@prisma/generator-helper": "^6.19.0",
-    "@prisma/internals": "^6.19.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.10.1",
-    "@typescript-eslint/eslint-plugin": "^8.46.3",
-    "@typescript-eslint/parser": "^8.46.3",
-    "@vitest/ui": "^4.0.8",
-    "eslint": "^9.39.1",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.4",
-    "eslint-plugin-sort-keys-fix": "^1.1.2",
-    "prettier": "^3.6.2",
-    "prisma": "6.19.0",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.8"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+	"name": "schematic",
+	"version": "1.0.0",
+	"description": "A Prisma generator",
+	"main": "dist/generator.js",
+	"bin": {
+		"schematic": "dist/generator.js"
+	},
+	"scripts": {
+		"build": "tsc --project tsconfig.build.json",
+		"dev": "tsc --project tsconfig.build.json --watch",
+		"prepack": "pnpm build",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:ui": "vitest --ui",
+		"test:coverage": "vitest run --coverage",
+		"lint": "eslint src/**/*.ts",
+		"lint:fix": "eslint src/**/*.ts --fix",
+		"format": "prettier --write \"src/**/*.ts\"",
+		"format:check": "prettier --check \"src/**/*.ts\"",
+		"typecheck": "tsc --noEmit"
+	},
+	"keywords": [
+		"prisma",
+		"prisma-generator",
+		"generator"
+	],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"@prisma/client": "6.19.0",
+		"@prisma/generator-helper": "^6.19.0",
+		"@prisma/internals": "^6.19.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.1",
+		"@typescript-eslint/eslint-plugin": "^8.46.3",
+		"@typescript-eslint/parser": "^8.46.3",
+		"@vitest/ui": "^4.0.8",
+		"eslint": "^9.39.1",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-prettier": "^5.5.4",
+		"eslint-plugin-sort-keys-fix": "^1.1.2",
+		"prettier": "^3.6.2",
+		"prisma": "6.19.0",
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.8"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseAnnotation } from './parseAnnotation';
+import { parseAnnotation } from '@utils/annotation.utils';
 
 describe('parseAnnotation', () => {
 	it('should parse basic annotation', () => {
