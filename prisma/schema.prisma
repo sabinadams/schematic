@@ -7,6 +7,7 @@ generator schematic {
     provider             = "node ./dist/generator.js"
     stateFilePath        = "./.schematic-state.json"
     autoIndexForeignKeys = true
+    // annotationPrefix     = "schematic" // Default: "schematic" (uses @schematic and @@schematic)
 }
 
 datasource db {

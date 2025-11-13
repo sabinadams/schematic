@@ -359,19 +359,21 @@ generator schematic {
 
   // Auto-optimization settings (all optional)
   autoIndexForeignKeys = true   // Automatically index FK columns (default: true, recommended for PostgreSQL)
-  autoIndexEnumColumns = false  // Automatically index enum columns (default: false)
+
+  // Customization
+  annotationPrefix     = "schematic"  // Custom annotation prefix (default: "schematic")
 }
 ```
 
 ### Configuration Options
 
-| Option                 | Type    | Default                     | Description                             |
-| ---------------------- | ------- | --------------------------- | --------------------------------------- |
-| `provider`             | string  | required                    | Package name or path to generator       |
-| `output`               | string  | `"../generated"`            | Output directory for state file         |
-| `stateFilePath`        | string  | `"./.schematic-state.json"` | Path to state file (relative to schema) |
-| `autoIndexForeignKeys` | boolean | `true`                      | Auto-create indexes for FK columns      |
-| `autoIndexEnumColumns` | boolean | `false`                     | Auto-create indexes for enum columns    |
+| Option                 | Type    | Default                     | Description                                       |
+| ---------------------- | ------- | --------------------------- | ------------------------------------------------- |
+| `provider`             | string  | required                    | Package name or path to generator                 |
+| `output`               | string  | `"../generated"`            | Output directory for state file                   |
+| `stateFilePath`        | string  | `"./.schematic-state.json"` | Path to state file (relative to schema)           |
+| `autoIndexForeignKeys` | boolean | `true`                      | Auto-create indexes for FK columns                |
+| `annotationPrefix`     | string  | `"schematic"`               | Custom prefix for annotations (@prefix, @@prefix) |
 
 ---
 
