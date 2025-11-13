@@ -63,10 +63,22 @@ describe('generate', () => {
 
 	const createMockOptions = (
 		config: Record<string, string> = {},
-		outputPath?: string | null
+		outputPath?: string | null,
+		datasources: GeneratorOptions['datasources'] = [
+			// @ts-expect-error - Mocking the datasource
+			{
+				name: 'db',
+				provider: 'postgresql',
+				url: {
+					fromEnvVar: 'DATABASE_URL',
+					value: null,
+				},
+				activeProvider: 'postgresql',
+			},
+		]
 	): GeneratorOptions => ({
 		datamodel: '',
-		datasources: [],
+		datasources,
 		dmmf: mockDMMF as any,
 		generator: {
 			binaryTargets: [],
@@ -216,6 +228,85 @@ describe('generate', () => {
 			expect(logger.info).not.toHaveBeenCalledWith('Generating new state file');
 			expect(logger.info).not.toHaveBeenCalledWith(
 				'Comparing previous state to new state'
+			);
+		});
+	});
+
+	describe('database provider', () => {
+		it('should successfully extract database provider', async () => {
+			const options = createMockOptions();
+			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+
+			await generate(options);
+
+			// Should not throw an error
+			expect(logger.info).toHaveBeenCalledWith('New state generation started');
+		});
+
+		it('should work with mysql provider', async () => {
+			const options = createMockOptions({}, undefined, [
+				// @ts-expect-error - Mocking the datasource
+				{
+					name: 'db',
+					provider: 'mysql',
+					url: {
+						fromEnvVar: 'DATABASE_URL',
+						value: null,
+					},
+					activeProvider: 'mysql',
+				},
+			]);
+			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+
+			await generate(options);
+
+			expect(logger.info).toHaveBeenCalledWith('New state generation started');
+		});
+
+		it('should work with sqlite provider', async () => {
+			const options = createMockOptions({}, undefined, [
+				// @ts-expect-error - Mocking the datasource
+				{
+					name: 'db',
+					provider: 'sqlite',
+					url: {
+						fromEnvVar: null,
+						value: 'file:./dev.db',
+					},
+					activeProvider: 'sqlite',
+				},
+			]);
+			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+
+			await generate(options);
+
+			expect(logger.info).toHaveBeenCalledWith('New state generation started');
+		});
+
+		it('should throw error when datasources array is empty', async () => {
+			const options = createMockOptions({}, undefined, []);
+
+			await expect(generate(options)).rejects.toThrow(
+				'Database provider not found'
+			);
+		});
+
+		it('should throw error when provider is undefined', async () => {
+			const options = createMockOptions({}, undefined, [
+				// @ts-expect-error - Mocking the datasource
+				{
+					name: 'db',
+					provider: undefined as any,
+					url: {
+						fromEnvVar: 'DATABASE_URL',
+						value: null,
+					},
+					activeProvider: undefined as any,
+				},
+			]);
+
+			await expect(generate(options)).rejects.toThrow(
+				'Database provider not found'
 			);
 		});
 	});

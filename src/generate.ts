@@ -10,7 +10,7 @@ export async function generate(options: SchematicGeneratorOptions) {
 
 	// Get the existing state file path if provided
 	const stateFilePath = generator.config.stateFilePath;
-	const databaseProvider = datasources[0].provider;
+	const databaseProvider = datasources[0]?.provider;
 
 	if (!databaseProvider) {
 		throw new Error('Database provider not found');
