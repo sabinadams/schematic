@@ -5,11 +5,16 @@ import { resolveAndLoadFile, resolveFilePath } from '@/utils/file.utils';
 import { SchematicGeneratorOptions } from '@/types/prisma.types';
 
 export async function generate(options: SchematicGeneratorOptions) {
-	const { dmmf: incomingState, generator } = options;
+	const { dmmf: incomingState, generator, datasources } = options;
 	logger.info('New state generation started');
 
 	// Get the existing state file path if provided
 	const stateFilePath = generator.config.stateFilePath;
+	const databaseProvider = datasources[0].provider;
+
+	if (!databaseProvider) {
+		throw new Error('Database provider not found');
+	}
 
 	let previousState;
 	if (stateFilePath) {
