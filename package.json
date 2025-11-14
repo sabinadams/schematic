@@ -7,8 +7,8 @@
 		"schematic": "dist/generator.js"
 	},
 	"scripts": {
-		"build": "tsc --project tsconfig.build.json",
-		"dev": "tsc --project tsconfig.build.json --watch",
+		"build": "tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+		"dev": "tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json --watch",
 		"prepack": "pnpm build",
 		"test": "vitest run",
 		"test:watch": "vitest",
@@ -43,6 +43,7 @@
 		"eslint-plugin-sort-keys-fix": "^1.1.2",
 		"prettier": "^3.6.2",
 		"prisma": "6.19.0",
+		"tsc-alias": "^1.8.16",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.8"
 	},

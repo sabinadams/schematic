@@ -1,0 +1,30 @@
+import { GeneratorOptions } from '@prisma/generator-helper';
+import { logger } from '@prisma/internals';
+import fs from 'fs/promises';
+import { resolveAndLoadFile, resolveFilePath } from '@/utils/file.utils';
+import { SchematicGeneratorOptions } from '@/types/prisma.types';
+import extractConfigFromSchema from './config';
+import loadState from '@/state/loader';
+
+export async function generate(options: SchematicGeneratorOptions) {
+	const { dmmf } = options;
+
+	logger.info('New state generation started');
+
+	const schematicConfig = extractConfigFromSchema(options);
+	const { stateFilePath, outputPath } = schematicConfig;
+
+	const _previousState = await loadState(stateFilePath, options.schemaPath);
+	// Get Incoming State from DMMF
+	// const incomingState = buildState(dmmf);
+
+	// if (incomingState && previousState) {
+	// 	logger.info('Generating new state file');
+	// 	// Generate the new state file
+	// 	logger.info('Comparing previous state to new state');
+	// 	// Compare the previous state to the new state
+	// }
+
+	// Ensure output directory exists
+	await fs.mkdir(outputPath, { recursive: true });
+}
