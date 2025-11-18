@@ -1,22 +1,34 @@
+import { Index } from '@/schemas/index.schema';
 import { DMMF } from '@prisma/generator-helper';
 
-interface _ExtendedField extends DMMF.Field {}
-interface _ExtendedIndex extends DMMF.Index {}
+// interface ExtendedField extends DMMF.Field {}
 
-interface _ExtendedModel extends DMMF.Model {
-	fields: _ExtendedField[];
-}
+// interface ExtendedIndex extends DMMF.Index {
+// 	where?: string;
+// }
 
-export interface _ExtendedDatamodel extends DMMF.Datamodel {
-	indexes: _ExtendedIndex[];
-	models: _ExtendedModel[];
-}
+// interface ExtendedModel extends DMMF.Model {
+// 	fields: ExtendedField[];
+// }
 
-export interface State {
+// interface ExtendedDatamodel extends DMMF.Datamodel {
+// 	indexes: ExtendedIndex[];
+// 	models: ExtendedModel[];
+// }
+
+interface State {
 	generatedAt: string;
 	schemaHash: string;
-	indexes: _ExtendedIndex[];
-	partialIndexes: _ExtendedIndex[];
-	//   checkConstraints: _ExtendedCheckConstraint[];
-	//   triggers: _ExtendedTrigger[];
+	indexes: Index[];
 }
+
+type Extractor<T> = (dmmf: DMMF.Document) => T[];
+
+export type {
+	// ExtendedDatamodel,
+	// ExtendedModel,
+	// ExtendedField,
+	// ExtendedIndex,
+	Extractor,
+	State,
+};

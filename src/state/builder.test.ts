@@ -2,15 +2,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import buildState from '@/state/builder';
 import { DMMF } from '@prisma/generator-helper';
 import * as hashModule from '@/utils/hash';
+import * as extractorModule from '@/state/extractor';
+import { SchematicConfig } from '@/types/schematic.types';
 
 vi.mock('@/utils/hash');
+vi.mock('@/state/extractor');
 
 describe('buildState', () => {
 	const mockHash = 'mockedhash123';
 
+	const mockConfig: SchematicConfig = {
+		databaseProvider: 'postgresql',
+		autoIndexForeignKeys: true,
+		annotationPrefix: 'schematic',
+		stateFilePath: './schematic.state.json',
+		outputPath: './generated',
+	};
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(hashModule.default).mockReturnValue(mockHash);
+		vi.mocked(extractorModule.default).mockReturnValue({ indexes: [] });
 	});
 
 	const createMockDMMF = (
@@ -55,17 +67,16 @@ describe('buildState', () => {
 
 	it('should build state with all required fields', () => {
 		const mockDMMF = createMockDMMF();
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
 		expect(result).toHaveProperty('generatedAt');
 		expect(result).toHaveProperty('schemaHash');
 		expect(result).toHaveProperty('indexes');
-		expect(result).toHaveProperty('partialIndexes');
 	});
 
 	it('should generate schemaHash from DMMF', () => {
 		const mockDMMF = createMockDMMF();
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
 		expect(hashModule.default).toHaveBeenCalledWith(mockDMMF);
 		expect(result.schemaHash).toBe(mockHash);
@@ -73,7 +84,7 @@ describe('buildState', () => {
 
 	it('should set generatedAt to ISO string', () => {
 		const mockDMMF = createMockDMMF();
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
 		expect(result.generatedAt).toBeDefined();
 		expect(typeof result.generatedAt).toBe('string');
@@ -84,18 +95,18 @@ describe('buildState', () => {
 
 	it('should initialize indexes as empty array', () => {
 		const mockDMMF = createMockDMMF();
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
 		expect(result.indexes).toEqual([]);
 		expect(Array.isArray(result.indexes)).toBe(true);
 	});
 
-	it('should initialize partialIndexes as empty array', () => {
+	it('should initialize indexes as empty array when no indexes exist', () => {
 		const mockDMMF = createMockDMMF();
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
-		expect(result.partialIndexes).toEqual([]);
-		expect(Array.isArray(result.partialIndexes)).toBe(true);
+		expect(result.indexes).toEqual([]);
+		expect(Array.isArray(result.indexes)).toBe(true);
 	});
 
 	it('should handle DMMF with models', () => {
@@ -132,7 +143,7 @@ describe('buildState', () => {
 			},
 		});
 
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
 		expect(hashModule.default).toHaveBeenCalledWith(mockDMMF);
 		expect(result.schemaHash).toBe(mockHash);
@@ -157,7 +168,7 @@ describe('buildState', () => {
 			},
 		});
 
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
 		expect(hashModule.default).toHaveBeenCalledWith(mockDMMF);
 		expect(result.schemaHash).toBe(mockHash);
@@ -203,25 +214,24 @@ describe('buildState', () => {
 			},
 		});
 
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
 		expect(hashModule.default).toHaveBeenCalledWith(mockDMMF);
 		expect(result).toMatchObject({
 			schemaHash: mockHash,
 			indexes: [],
-			partialIndexes: [],
 		});
 	});
 
 	it('should generate different timestamps for consecutive calls', async () => {
 		const mockDMMF = createMockDMMF();
 
-		const result1 = buildState(mockDMMF);
+		const result1 = buildState(mockDMMF, mockConfig);
 
 		// Wait a tiny bit to ensure different timestamps
 		await new Promise((resolve) => setTimeout(resolve, 2));
 
-		const result2 = buildState(mockDMMF);
+		const result2 = buildState(mockDMMF, mockConfig);
 
 		// Timestamps should be different (though hash will be the same)
 		expect(result1.generatedAt).not.toBe(result2.generatedAt);
@@ -248,7 +258,7 @@ describe('buildState', () => {
 			},
 		});
 
-		buildState(mockDMMF);
+		buildState(mockDMMF, mockConfig);
 
 		expect(hashModule.default).toHaveBeenCalledTimes(1);
 		expect(hashModule.default).toHaveBeenCalledWith(mockDMMF);
@@ -256,22 +266,20 @@ describe('buildState', () => {
 
 	it('should handle empty DMMF', () => {
 		const mockDMMF = createMockDMMF();
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
 		expect(result).toBeDefined();
 		expect(result.schemaHash).toBe(mockHash);
 		expect(result.indexes).toEqual([]);
-		expect(result.partialIndexes).toEqual([]);
 	});
 
 	it('should return state with correct structure', () => {
 		const mockDMMF = createMockDMMF();
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
 		expect(Object.keys(result).sort()).toEqual([
 			'generatedAt',
 			'indexes',
-			'partialIndexes',
 			'schemaHash',
 		]);
 	});
@@ -307,7 +315,7 @@ describe('buildState', () => {
 			},
 		});
 
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
 		expect(result.schemaHash).toBe(mockHash);
 		expect(hashModule.default).toHaveBeenCalledWith(mockDMMF);
@@ -347,7 +355,7 @@ describe('buildState', () => {
 			},
 		});
 
-		const result = buildState(mockDMMF);
+		const result = buildState(mockDMMF, mockConfig);
 
 		expect(result.schemaHash).toBe(mockHash);
 		expect(hashModule.default).toHaveBeenCalledWith(mockDMMF);

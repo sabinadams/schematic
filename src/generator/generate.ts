@@ -18,7 +18,7 @@ export async function generate(options: SchematicGeneratorOptions) {
 	const previousState = await loadState(stateFilePath, options.schemaPath);
 
 	// Get Incoming State from DMMF
-	const incomingState = buildState(dmmf);
+	const incomingState = buildState(dmmf, schematicConfig);
 
 	if (incomingState && previousState) {
 		console.log('Incoming state:', incomingState);

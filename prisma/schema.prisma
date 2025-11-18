@@ -15,6 +15,7 @@ datasource db {
     url      = "file:./dev.db"
 }
 
+/// @schematic.index(name: "test", fields: ["email"], where: "email IS NOT NULL")
 model User {
     createdAt DateTime @default(now())
     email     String   @unique

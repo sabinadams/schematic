@@ -1,8 +1,9 @@
 import { SchematicGeneratorOptions } from '@/types/prisma.types';
+import { SchematicConfig } from '@/types/schematic.types';
 
 export default function extractConfigFromSchema(
 	config: SchematicGeneratorOptions
-) {
+): SchematicConfig {
 	const { generator, datasources } = config;
 	const databaseProvider = datasources[0]?.provider;
 

@@ -1,36 +1,46 @@
+import { Annotation, ParsedAnnotation } from '@/types/schematic.types';
+
 /**
  * Parses @schematic.* annotations into structured objects
  *
  * @param annotation - The annotation string
- * @returns Parsed annotation object
+ * @param annotationPrefix - The prefix to strip (defaults to 'schematic')
+ * @returns Parsed annotation object with 'type' and parsed arguments
  *
  * @example
  * parseAnnotation('@schematic.partialIndex(columns: ["email"], where: "active = true")')
- * // Returns: { schematic: 'partial_index', columns: ["email"], where: "active = true" }
+ * // Returns: { type: 'partialIndex', columns: ["email"], where: "active = true" }
  */
-export function parseAnnotation(annotation: string): Record<string, unknown> {
-	// Remove @ and whitespace
-	const cleaned = annotation.trim().replace(/^@/, '');
+export function parseAnnotation(
+	annotation: string,
+	annotationPrefix: string
+): ParsedAnnotation {
+	const cleaned = annotation.trim();
 
-	// Extract type and arguments: schematic.partialIndex(...)
-	const match = cleaned.match(/^schematic\.(\w+)\((.*)\)$/s);
+	// Strip @prefix. in one step: '@schematic.partialIndex(...)' → 'partialIndex(...)'
+	const prefixPattern = new RegExp(`^@${annotationPrefix}\\.`);
+	if (!prefixPattern.test(cleaned)) {
+		throw new Error(
+			`Annotation must start with @${annotationPrefix}. Got: ${annotation}`
+		);
+	}
+	const withoutPrefix = cleaned.replace(prefixPattern, '');
+
+	// Extract type and arguments: 'partialIndex(...)' → ['partialIndex', '...']
+	const match = withoutPrefix.match(/^(\w+)\((.*)\)$/s);
 	if (!match) {
-		throw new Error(`Invalid annotation format: ${annotation}`);
+		throw new Error(
+			`Invalid annotation format: ${annotation}. Expected format: @${annotationPrefix}.<type>(<args>)`
+		);
 	}
 
 	const [, type, argsStr] = match;
-
-	// Convert camelCase to snake_case
-	const schematicType = type.replace(
-		/[A-Z]/g,
-		(letter) => `_${letter.toLowerCase()}`
-	);
 
 	// Parse arguments using JSON-like parsing
 	const args = parseArguments(argsStr);
 
 	return {
-		schematic: schematicType,
+		_schematic_type: type,
 		...args,
 	};
 }
