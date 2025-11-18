@@ -5,6 +5,7 @@ import { resolveAndLoadFile, resolveFilePath } from '@/utils/file.utils';
 import { SchematicGeneratorOptions } from '@/types/prisma.types';
 import extractConfigFromSchema from './config';
 import loadState from '@/state/loader';
+import buildState from '@/state/builder';
 
 export async function generate(options: SchematicGeneratorOptions) {
 	const { dmmf } = options;
@@ -14,16 +15,17 @@ export async function generate(options: SchematicGeneratorOptions) {
 	const schematicConfig = extractConfigFromSchema(options);
 	const { stateFilePath, outputPath } = schematicConfig;
 
-	const _previousState = await loadState(stateFilePath, options.schemaPath);
+	const previousState = await loadState(stateFilePath, options.schemaPath);
 	// Get Incoming State from DMMF
-	// const incomingState = buildState(dmmf);
+	const incomingState = buildState(dmmf);
 
-	// if (incomingState && previousState) {
-	// 	logger.info('Generating new state file');
-	// 	// Generate the new state file
-	// 	logger.info('Comparing previous state to new state');
-	// 	// Compare the previous state to the new state
-	// }
+	if (incomingState && previousState) {
+		console.log('Incoming state:', incomingState);
+		// 	logger.info('Generating new state file');
+		// 	// Generate the new fstate file
+		// 	logger.info('Comparing previous state to new state');
+		// 	// Compare the previous state to the new state
+	}
 
 	// Ensure output directory exists
 	await fs.mkdir(outputPath, { recursive: true });

@@ -4,7 +4,7 @@ generator client {
 
 generator schematic {
     output               = "../generated"
-    provider             = "node ./dist/generator.js"
+    provider             = "node ./dist/index.js"
     stateFilePath        = "./.schematic-state.json"
     autoIndexForeignKeys = true
     // annotationPrefix     = "schematic" // Default: "schematic" (uses @schematic and @@schematic)

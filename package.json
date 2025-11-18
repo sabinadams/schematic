@@ -2,13 +2,13 @@
 	"name": "schematic",
 	"version": "1.0.0",
 	"description": "A Prisma generator",
-	"main": "dist/generator.js",
+	"main": "dist/index.js",
 	"bin": {
-		"schematic": "dist/generator.js"
+		"schematic": "dist/index.js"
 	},
 	"scripts": {
-		"build": "tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json",
-		"dev": "tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json --watch",
+		"build": "tsup",
+		"dev": "tsup --watch",
 		"prepack": "pnpm build",
 		"test": "vitest run",
 		"test:watch": "vitest",
@@ -43,7 +43,7 @@
 		"eslint-plugin-sort-keys-fix": "^1.1.2",
 		"prettier": "^3.6.2",
 		"prisma": "6.19.0",
-		"tsc-alias": "^1.8.16",
+		"tsup": "^8.5.1",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.8"
 	},
