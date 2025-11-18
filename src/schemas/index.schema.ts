@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { BaseSchema } from './base.schema';
-import { ParsedAnnotation } from '@/types/schematic.types';
 
 /**
  * Schema for validating annotation input (what users write in Prisma schema)
@@ -16,6 +15,6 @@ const IndexSchema = BaseSchema.extend({
 
 export type Index = z.infer<typeof IndexSchema>;
 
-export const validate = (value: ParsedAnnotation): Index => {
+export const validate = (value: unknown): Index => {
 	return IndexSchema.parse(value);
 };

@@ -1,4 +1,4 @@
-import { Annotation, ParsedAnnotation } from '@/types/schematic.types';
+import { RawParsedAnnotation } from '@/types/schematic.types';
 
 /**
  * Parses @schematic.* annotations into structured objects
@@ -14,7 +14,7 @@ import { Annotation, ParsedAnnotation } from '@/types/schematic.types';
 export function parseAnnotation(
 	annotation: string,
 	annotationPrefix: string
-): ParsedAnnotation {
+): RawParsedAnnotation {
 	const cleaned = annotation.trim();
 
 	// Strip @prefix. in one step: '@schematic.partialIndex(...)' → 'partialIndex(...)'
