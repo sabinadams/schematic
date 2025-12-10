@@ -28,7 +28,7 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"@prisma/client": "6.19.0",
+		"@prisma/client": "6.19.1",
 		"@prisma/generator-helper": "^6.19.0",
 		"@prisma/internals": "^6.19.0",
 		"zod": "^4.1.12"
@@ -43,7 +43,7 @@
 		"eslint-plugin-prettier": "^5.5.4",
 		"eslint-plugin-sort-keys-fix": "^1.1.2",
 		"prettier": "^3.6.2",
-		"prisma": "6.19.0",
+		"prisma": "6.19.1",
 		"tsup": "^8.5.1",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.8"
