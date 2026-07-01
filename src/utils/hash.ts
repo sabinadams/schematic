@@ -1,4 +1,3 @@
-import { State } from '@/types/state.types';
 import { createHash } from 'crypto';
 
 export default function computeHash(value: string | object): string {

@@ -4,6 +4,7 @@ import { generate } from './generate';
 import fs from 'fs/promises';
 import { logger } from '@prisma/internals';
 import * as loader from '@/state/loader';
+import { createMockDataSource } from '@/test/mock-datasource';
 
 vi.mock('fs/promises');
 vi.mock('@/state/loader');
@@ -67,16 +68,7 @@ describe('generate', () => {
 		config: Record<string, string> = {},
 		outputPath?: string | null,
 		datasources: GeneratorOptions['datasources'] = [
-			// @ts-expect-error - Mocking the datasource
-			{
-				name: 'db',
-				provider: 'postgresql',
-				url: {
-					fromEnvVar: 'DATABASE_URL',
-					value: null,
-				},
-				activeProvider: 'postgresql',
-			},
+			createMockDataSource('postgresql'),
 		]
 	): GeneratorOptions => ({
 		datamodel: '',
@@ -253,16 +245,7 @@ describe('generate', () => {
 
 		it('should work with mysql provider', async () => {
 			const options = createMockOptions({}, undefined, [
-				// @ts-expect-error - Mocking the datasource
-				{
-					name: 'db',
-					provider: 'mysql',
-					url: {
-						fromEnvVar: 'DATABASE_URL',
-						value: null,
-					},
-					activeProvider: 'mysql',
-				},
+				createMockDataSource('mysql'),
 			]);
 			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 			vi.mocked(loader.default).mockResolvedValue({ version: '1.0.0' });
@@ -274,16 +257,7 @@ describe('generate', () => {
 
 		it('should work with sqlite provider', async () => {
 			const options = createMockOptions({}, undefined, [
-				// @ts-expect-error - Mocking the datasource
-				{
-					name: 'db',
-					provider: 'sqlite',
-					url: {
-						fromEnvVar: null,
-						value: 'file:./dev.db',
-					},
-					activeProvider: 'sqlite',
-				},
+				createMockDataSource('sqlite'),
 			]);
 			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 			vi.mocked(loader.default).mockResolvedValue({ version: '1.0.0' });
@@ -303,15 +277,10 @@ describe('generate', () => {
 
 		it('should throw error when provider is undefined', async () => {
 			const options = createMockOptions({}, undefined, [
-				// @ts-expect-error - Mocking the datasource
 				{
-					name: 'db',
-					provider: undefined as any,
-					url: {
-						fromEnvVar: 'DATABASE_URL',
-						value: null,
-					},
-					activeProvider: undefined as any,
+					...createMockDataSource('postgresql'),
+					provider: undefined as never,
+					activeProvider: undefined as never,
 				},
 			]);
 

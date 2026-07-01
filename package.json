@@ -28,25 +28,24 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"@prisma/client": "6.19.0",
-		"@prisma/generator-helper": "^6.19.0",
-		"@prisma/internals": "^6.19.0",
-		"zod": "^4.1.12"
+		"@prisma/client": "7.8.0",
+		"@prisma/generator-helper": "^7.8.0",
+		"@prisma/internals": "^7.8.0",
+		"zod": "^4.4.3"
 	},
 	"devDependencies": {
-		"@types/node": "^24.0.0",
-		"@typescript-eslint/eslint-plugin": "^8.46.3",
-		"@typescript-eslint/parser": "^8.46.3",
-		"@vitest/ui": "^4.0.8",
-		"eslint": "^9.39.1",
+		"@types/node": "^26.0.1",
+		"@typescript-eslint/eslint-plugin": "^8.62.1",
+		"@typescript-eslint/parser": "^8.62.1",
+		"@vitest/ui": "^4.1.9",
+		"eslint": "^10.6.0",
 		"eslint-config-prettier": "^10.1.8",
-		"eslint-plugin-prettier": "^5.5.4",
-		"eslint-plugin-sort-keys-fix": "^1.1.2",
-		"prettier": "^3.6.2",
-		"prisma": "6.19.0",
+		"eslint-plugin-prettier": "^5.5.6",
+		"prettier": "^3.9.4",
+		"prisma": "7.8.0",
 		"tsup": "^8.5.1",
-		"typescript": "^5.9.3",
-		"vitest": "^4.0.8"
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.9"
 	},
 	"engines": {
 		"node": ">=18.0.0"

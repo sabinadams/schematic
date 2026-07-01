@@ -1,10 +1,5 @@
-import { logger } from '@prisma/internals';
 import { DMMF } from '@prisma/generator-helper';
-import {
-	Annotation,
-	RawParsedAnnotation,
-	SchematicConfig,
-} from '@/types/schematic.types';
+import { RawParsedAnnotation, SchematicConfig } from '@/types/schematic.types';
 import { parseAnnotation } from '@/utils/annotation.utils';
 import schemas, { type SchemaType } from '@/schemas/index';
 import { State } from '@/types/state.types';

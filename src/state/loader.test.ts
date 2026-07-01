@@ -78,9 +78,9 @@ describe('loadState', () => {
 		);
 		vi.mocked(fileUtils.resolveAndLoadFile).mockResolvedValue(null);
 
-		await expect(
-			loadState(mockStateFilePath, mockSchemaPath)
-		).rejects.toThrow('State file is empty: ./.schematic-state.json');
+		await expect(loadState(mockStateFilePath, mockSchemaPath)).rejects.toThrow(
+			'State file is empty: ./.schematic-state.json'
+		);
 	});
 
 	it('should throw error when state file is undefined', async () => {
@@ -89,9 +89,9 @@ describe('loadState', () => {
 		);
 		vi.mocked(fileUtils.resolveAndLoadFile).mockResolvedValue(undefined);
 
-		await expect(
-			loadState(mockStateFilePath, mockSchemaPath)
-		).rejects.toThrow('State file is empty: ./.schematic-state.json');
+		await expect(loadState(mockStateFilePath, mockSchemaPath)).rejects.toThrow(
+			'State file is empty: ./.schematic-state.json'
+		);
 	});
 
 	it('should throw descriptive error when file cannot be loaded', async () => {
@@ -102,9 +102,7 @@ describe('loadState', () => {
 		);
 		vi.mocked(fileUtils.resolveAndLoadFile).mockRejectedValue(originalError);
 
-		await expect(
-			loadState(mockStateFilePath, mockSchemaPath)
-		).rejects.toThrow(
+		await expect(loadState(mockStateFilePath, mockSchemaPath)).rejects.toThrow(
 			'There was an error loading the state file: ./.schematic-state.json. File not found'
 		);
 	});
@@ -117,9 +115,7 @@ describe('loadState', () => {
 			'String error message'
 		);
 
-		await expect(
-			loadState(mockStateFilePath, mockSchemaPath)
-		).rejects.toThrow(
+		await expect(loadState(mockStateFilePath, mockSchemaPath)).rejects.toThrow(
 			'There was an error loading the state file: ./.schematic-state.json. String error message'
 		);
 	});
@@ -229,13 +225,9 @@ describe('loadState', () => {
 		vi.mocked(fileUtils.resolveFilePath).mockReturnValue(
 			'/project/prisma/.schematic-state.json'
 		);
-		vi.mocked(fileUtils.resolveAndLoadFile).mockRejectedValue(
-			errorWithContext
-		);
+		vi.mocked(fileUtils.resolveAndLoadFile).mockRejectedValue(errorWithContext);
 
-		await expect(
-			loadState(mockStateFilePath, mockSchemaPath)
-		).rejects.toThrow(
+		await expect(loadState(mockStateFilePath, mockSchemaPath)).rejects.toThrow(
 			'There was an error loading the state file: ./.schematic-state.json. ENOENT: no such file or directory'
 		);
 	});
@@ -248,9 +240,7 @@ describe('loadState', () => {
 		);
 		vi.mocked(fileUtils.resolveAndLoadFile).mockRejectedValue(permissionError);
 
-		await expect(
-			loadState(mockStateFilePath, mockSchemaPath)
-		).rejects.toThrow(
+		await expect(loadState(mockStateFilePath, mockSchemaPath)).rejects.toThrow(
 			'There was an error loading the state file: ./.schematic-state.json. EACCES: permission denied'
 		);
 	});
@@ -263,11 +253,8 @@ describe('loadState', () => {
 		);
 		vi.mocked(fileUtils.resolveAndLoadFile).mockRejectedValue(jsonError);
 
-		await expect(
-			loadState(mockStateFilePath, mockSchemaPath)
-		).rejects.toThrow(
+		await expect(loadState(mockStateFilePath, mockSchemaPath)).rejects.toThrow(
 			'There was an error loading the state file: ./.schematic-state.json. Unexpected token in JSON at position 0'
 		);
 	});
 });
-
