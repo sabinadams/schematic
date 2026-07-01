@@ -395,9 +395,12 @@ Doc comments in `schema.prisma` (`///`). Prisma exposes them on DMMF `documentat
 
 ## Documentation
 
+- [AGENTS.md](AGENTS.md) — entry point for AI agents (read first)
+- [Implementation status](docs/status.md) — what is built vs documented
 - [Architecture](docs/architecture.md) — module layout, data flow, design decisions
-- [Roadmap](docs/roadmap.md) — completed features and future work
+- [Design reference](docs/plan.md) — canonical architecture spec
 - [Handler guide](docs/handlers.md) — detailed handler authoring reference
+- [Roadmap](docs/roadmap.md) — completed features and future work
 
 ---
 

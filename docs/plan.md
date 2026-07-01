@@ -141,6 +141,8 @@ Example handlers live in `examples/handlers/`.
 
 ## Related docs
 
+- [AGENTS.md](../AGENTS.md) — entry point for AI agents working in this repo
+- [status.md](./status.md) — what is implemented vs documented
 - [Architecture](./architecture.md) — module layout and implementation details
 - [Handler guide](./handlers.md) — authoring reference for users
 - [Roadmap](./roadmap.md) — completed features and future work
