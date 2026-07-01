@@ -1,46 +1,27 @@
 # Agent Rules Setup
 
-Cursor reads rules from `.cursor/rules/*.mdc`. Source copies live in this directory as `.md` files (plan mode cannot write `.mdc` directly — copy manually or use Agent mode).
+Cursor rules are **installed** in [`.cursor/rules/`](../.cursor/rules/). Sources live here as `.md` files — edit sources, then sync to `.cursor/rules/*.mdc`.
 
-## Install (one-time per clone)
+## Sync after editing sources
 
-Create `.cursor/rules/schematic-core.mdc` from `schematic-core.md` with frontmatter:
+When you change a file in this directory, update the matching `.mdc`:
 
-```yaml
----
-description: Schematic core design rules
-alwaysApply: true
----
+```bash
+# Example: after editing schematic-core.md, rebuild schematic-core.mdc
+# (prepend YAML frontmatter from .cursor/rules/schematic-core.mdc, then append body from schematic-core.md skipping the Cursor install note line)
 ```
 
-Create `.cursor/rules/schematic-handlers.mdc` from `schematic-handlers.md`:
-
-```yaml
----
-description: Handler authoring rules
-globs: examples/**/*.ts,**/schematic.handlers.ts
-alwaysApply: false
----
-```
-
-Create `.cursor/rules/schematic-state.mdc` from `schematic-state.md`:
-
-```yaml
----
-description: State and migration rules
-globs: src/state/**/*.ts,src/migrations/**/*.ts,src/cli/**/*.ts
-alwaysApply: false
----
-```
+Or copy manually: frontmatter from existing `.mdc` + body from `.md` (skip line 3 install note).
 
 ## Rule files
 
-| Source | Scope | Purpose |
-| ------ | ----- | ------- |
-| `schematic-core.md` | Always apply | Non-negotiable design rules |
-| `schematic-handlers.md` | examples, handlers config | Handler authoring |
-| `schematic-state.md` | state, migrations, cli | State, diff, migrations |
+| Source | Installed | Scope |
+| ------ | --------- | ----- |
+| `schematic-core.md` | `.cursor/rules/schematic-core.mdc` | Always apply |
+| `schematic-handlers.md` | `.cursor/rules/schematic-handlers.mdc` | examples, handlers config |
+| `schematic-state.md` | `.cursor/rules/schematic-state.mdc` | state, migrations, cli |
 
 ## For non-Cursor agents
 
-Read [`AGENTS.md`](../../AGENTS.md) at the repo root — it consolidates the same rules plus doc map and status pointers.
+- [AGENTS.md](../../AGENTS.md) — canonical guide
+- [CLAUDE.md](../../CLAUDE.md) — Claude Code entry point

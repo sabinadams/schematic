@@ -1,7 +1,7 @@
-# Schematic Core Rules
-
-> Cursor: copy to `.cursor/rules/schematic-core.mdc` with `alwaysApply: true` frontmatter. See [README.md](./README.md).
-
+---
+description: Schematic core design rules — pluggable handlers, no hard-coded features
+alwaysApply: true
+---
 Schematic is a pluggable Prisma annotation pipeline. Read `AGENTS.md` and `docs/status.md` before coding.
 
 ## Must follow

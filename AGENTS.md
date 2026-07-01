@@ -1,12 +1,20 @@
 # Agent Guide — Schematic
 
-This file orients AI agents (Cursor, Claude, etc.) working in this repo. Read it first.
+This file orients AI agents (Cursor, Claude, etc.) working in this repo. **Read it first.**
 
-## What this project is
+---
 
-Schematic is a **Prisma generator + CLI** that lets users define custom database annotations via **Zod schemas and handlers**. Core orchestrates extraction, validation, state, diffing, and migration SQL. **Nothing feature-specific is hard-coded in core.**
+## Project overview
 
-Target workflow:
+**Schematic** is a Prisma generator and CLI that lets users define custom database annotations via Zod schemas and handlers. Core orchestrates extraction, validation, state tracking, diffing, and migration SQL. Users bring the features; core brings the pipeline.
+
+**Prisma owns:** tables, columns, relations, basic indexes, migration history.
+
+**Schematic owns:** reading `@schematic.*` doc comments from DMMF, validating via user handlers, persisting desired state, diffing, and appending SQL to Prisma migrations.
+
+**Users own:** annotation types, Zod schemas, and SQL generation logic (`upSql` / `downSql`).
+
+Target dev workflow:
 
 ```bash
 prisma migrate dev --create-only --name my_change
@@ -14,31 +22,172 @@ schematic enhance          # diff vs git HEAD, append SQL
 prisma migrate dev         # apply + prisma generate updates state
 ```
 
+User-facing docs: [README.md](README.md). Design spec: [docs/plan.md](docs/plan.md).
+
+---
+
+## Philosophy
+
+These principles apply to **all** work in this repo — code, docs, and tests.
+
+### Pluggable over prescriptive
+
+Nothing feature-specific belongs in core. Partial indexes, GIN indexes, FK auto-indexing, check constraints — all are handler examples or user code, not built-in branches in `src/`.
+
+### Functional and composable
+
+This tool is a pipeline of transformations (schema → state → diff → SQL). Prefer small pure functions, clear inputs/outputs, and composition over inheritance or deep class hierarchies.
+
+### Minimal scope
+
+Use the simplest correct diff. Do not add unrelated code, refactors, tests, or docs unless requested or clearly required by the change. Match existing naming, imports, and file structure.
+
+### State is the source of truth for reversal
+
+When a feature is created, persist both `upSql` and `downSql` in the state file. Removals emit stored `downSql` — even if the handler is later deleted. Do not recompute reversal SQL at drop time.
+
+### Docs must not lie about implementation
+
+[docs/status.md](docs/status.md) tracks what is actually built. README and roadmap may describe target architecture. Before claiming a feature is done, update code **and** status.
+
+### Docs stay in sync with code
+
+Documentation updates belong in the **same PR** as code changes. See "Documentation maintenance" under Development practices for which files to update when.
+
+---
+
+## Development practices
+
+### Commands
+
+```bash
+pnpm install
+pnpm build
+pnpm test              # run all tests
+pnpm test:coverage     # coverage report
+pnpm typecheck
+pnpm lint
+pnpm format:check
+```
+
+### Testing
+
+**Test thoroughly.** There is no fixed coverage percentage enforced in CI today, but every change should be tested appropriately:
+
+- **Update tests when you change behavior** — if you modify a module, update its tests in the same PR
+- **Pure functions get unit tests** — parser, hash, comparator, builder, config extraction
+- **Test behavior, not implementation** — especially diff/reversal paths (removed feature emits stored `downSql`; handler absent still reverses)
+- **Avoid trivial tests** — don't assert the obvious; do cover edge cases and regressions
+- **New modules ship with tests** — colocate as `*.test.ts` next to source (existing convention)
+
+Critical paths that always need tests when touched:
+
+| Area | Why |
+| ---- | --- |
+| `annotation.utils.ts` | Parsing is easy to break with edge-case strings |
+| `state/comparator.ts` | Wrong diff = wrong migrations |
+| `state/builder.ts` | Must preserve stored SQL for unchanged ids |
+| `registry/loader.ts` | User handler loading must fail clearly |
+
+Run `pnpm test` before considering work complete.
+
+### Documentation maintenance
+
+**Keep docs in sync with code.** Documentation drift is how agents and humans build the wrong thing. Update docs in the **same PR** as code changes — not in a follow-up.
+
+#### Always update (when relevant to your change)
+
+| Doc | Update when |
+| --- | ----------- |
+| [docs/status.md](docs/status.md) | Any implementation change — move items between implemented / not implemented |
+| Tests | Behavior changes (see Testing above) |
+| [AGENTS.md](AGENTS.md) | Project philosophy, dev practices, or agent workflow changes |
+| [docs/agent-rules/](docs/agent-rules/) | Agent/Cursor rules change — keep in sync with AGENTS.md |
+
+#### Update when the change affects them
+
+| Doc | Update when |
+| --- | ----------- |
+| [docs/plan.md](docs/plan.md) | Architecture, invariants, or data flow change |
+| [docs/architecture.md](docs/architecture.md) | Module layout, file paths, or responsibilities change |
+| [docs/handlers.md](docs/handlers.md) | Public handler API or authoring contract changes |
+| [README.md](README.md) | User-facing setup, config options, CLI, or workflow changes |
+| [docs/roadmap.md](docs/roadmap.md) | A phased feature is **actually shipped** (code + status.md first) |
+| [docs/future.md](docs/future.md) | Scope moves in or out of the project |
+| [examples/handlers/](examples/handlers/) | Example handler API or patterns change |
+
+#### Usually do not update
+
+- **README / roadmap** for internal refactors with no user-visible change
+- **plan.md / architecture.md** for bug fixes that don't change design
+- **All docs** on every PR — only what your change touches
+
+#### Consistency rules
+
+1. **`docs/status.md` is the implementation truth** — if code exists, status must reflect it; if status claims done, code must exist
+2. **Roadmap checkboxes follow status.md** — never mark complete in roadmap alone
+3. **Agent docs follow human docs** — if workflow or architecture changes, update AGENTS.md and agent-rules together
+4. **Don't document unimplemented behavior as current** — use "planned" in future.md or leave out of README until shipped
+5. **Minimal doc diffs** — same as code; don't rewrite unrelated sections
+
+### Code quality
+
+- TypeScript strict — run `pnpm typecheck`
+- ESLint + Prettier — match existing style (`pnpm lint`, `pnpm format:check`)
+- `@/` path aliases — follow existing imports
+- One concern per file — see [docs/architecture.md](docs/architecture.md)
+
+### Before opening a PR
+
+1. `pnpm test && pnpm typecheck && pnpm lint`
+2. Tests updated for behavior changes
+3. [docs/status.md](docs/status.md) updated if implementation changed
+4. Other docs updated per the table above (plan, architecture, README, agent-rules — as applicable)
+5. Do not mark roadmap items complete without code + status update
+6. Keep diffs focused — no drive-by refactors or doc rewrites
+
+### Commits
+
+Only commit when asked. Follow existing commit message style (concise, explains why).
+
+---
+
 ## Documentation map
 
-| Doc | Purpose |
-| --- | ------- |
-| [docs/plan.md](docs/plan.md) | Canonical design reference (start here for architecture) |
-| [docs/architecture.md](docs/architecture.md) | Module layout, data flows, invariants |
-| [docs/handlers.md](docs/handlers.md) | How users author handlers |
-| [docs/status.md](docs/status.md) | **What is implemented vs documented** |
+| Doc | When to read |
+| --- | ------------ |
+| [docs/status.md](docs/status.md) | **Always** — what's implemented vs documented |
+| [docs/plan.md](docs/plan.md) | Architecture decisions, data flow, invariants |
+| [docs/architecture.md](docs/architecture.md) | Module layout and responsibilities |
+| [docs/handlers.md](docs/handlers.md) | Authoring user-facing handlers |
 | [docs/roadmap.md](docs/roadmap.md) | Completed phases and future work |
-| [docs/future.md](docs/future.md) | Explicitly out-of-scope / later items |
-| [README.md](README.md) | User-facing overview |
+| [docs/future.md](docs/future.md) | Explicitly deferred items |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Human contributor setup and workflow |
+| [CLAUDE.md](CLAUDE.md) | Claude Code entry point (imports this file + docs) |
+| [docs/agent-rules/](docs/agent-rules/) | Cursor rule sources (installed to `.cursor/rules/`) |
 
-## Non-negotiable design rules
+---
 
-1. **No hard-coded annotation types in core** — partial indexes, GIN indexes, FK auto-index, etc. belong in `examples/handlers/` or user projects, not `src/`.
-2. **Annotations come from DMMF `documentation`** — doc comments (`///`) on models and fields. Handlers do not define where annotations are found.
-3. **Persist `downSql` in state at creation** — reversals use stored SQL from the state file, not re-invoked handlers. This allows undo even after a handler is removed.
-4. **`schematic enhance` baselines against git HEAD** — not the post-`prisma generate` disk state. See [docs/plan.md](docs/plan.md).
-5. **Functional, small files** — pure functions, composition over inheritance. See [docs/architecture.md](docs/architecture.md).
-6. **Minimal scope** — match existing conventions; don't add unrelated code, tests, or docs unless requested.
+## Schematic-specific rules
 
-## Key types (target architecture)
+These are domain constraints agents must not violate. Details in [docs/plan.md](docs/plan.md).
+
+1. **Annotations come from DMMF `documentation`** — `///` doc comments on models and fields. Handlers do not define where annotations are found.
+2. **`schematic enhance` baselines git HEAD state** — not post-`prisma generate` disk state.
+3. **Preserve stored SQL for unchanged feature ids** — do not re-call `handler.up()` on unchanged entries.
+4. **No closed registries** — do not reintroduce hard-coded type lists like `src/schemas/index.ts`.
+5. **Fail fast** on unknown annotation types when no handler is registered.
+
+### Common mistakes
+
+- Hard-coding `partialIndex`, `ginIndex`, etc. in core
+- Bucketing state into `indexes[]`, `partialIndexes[]`, etc. instead of `features[]`
+- Using disk state as enhance baseline
+- Claiming features done in docs without updating `docs/status.md`
+
+### Key types (target)
 
 ```typescript
-// User-facing (registry/types.ts)
 interface AnnotationDefinition<TSchema extends z.ZodType> {
   type: string;
   schema: TSchema;
@@ -49,44 +198,35 @@ interface AnnotationDefinition<TSchema extends z.ZodType> {
   };
 }
 
-// State (state.types.ts)
 interface StateFeature {
-  id: string;       // stable hash(type + model + field? + input)
+  id: string;
   type: string;
   model: string;
   input: Record<string, unknown>;
   upSql: string;
-  downSql: string;  // persisted at creation, used for reversal
+  downSql: string;
   createdAt: string;
 }
 ```
 
-## Before making changes
+---
 
-1. Read [docs/status.md](docs/status.md) — docs may describe target state; code may lag.
-2. Check `.cursor/rules/` for file-specific constraints.
-3. Prefer extending the registry pipeline over adding special cases in extractor/builder.
-4. Do not reintroduce closed registries like `src/schemas/index.ts` with hard-coded types.
+## Cursor rules
 
-## Common mistakes to avoid
+Installed rules: [.cursor/rules/](.cursor/rules/) (auto-injected in Cursor).
 
-- Adding `partialIndex`, `ginIndex`, etc. as built-in core logic
-- Re-calling `handler.up()` for unchanged features (preserve stored SQL by stable `id`)
-- Using disk state as enhance baseline instead of git HEAD
-- Scanning for annotations outside DMMF `documentation` without an explicit design change
-- Updating README/roadmap to claim features are done before code implements them (update `docs/status.md` instead)
+Sources (keep in sync when editing): [docs/agent-rules/](docs/agent-rules/).
 
-## Testing expectations
+| Rule | Scope |
+| ---- | ----- |
+| `schematic-core.mdc` | Always — design non-negotiables |
+| `schematic-handlers.mdc` | Handlers and examples |
+| `schematic-state.mdc` | State, migrations, CLI |
 
-- Unit test pure functions (parser, comparator, hash, builder)
-- Test reversal: removal emits stored `downSql` even when handler is absent
-- Test delete ordering: `dropPriority` then reverse `createdAt`
+Project skill: [.cursor/skills/schematic/SKILL.md](.cursor/skills/schematic/SKILL.md) — use when implementing phases from `docs/status.md`.
 
-## Branch context
+---
 
-- `docs/pluggable-annotation-pipeline` — documentation describes target architecture
-- Implementation work should align docs/code or update `docs/status.md` when intentionally partial
+## Branch note
 
-## Agent rules (Cursor)
-
-Rule sources live in [`docs/agent-rules/`](docs/agent-rules/). Copy to `.cursor/rules/*.mdc` per that README, or switch to Agent mode to install them automatically.
+`docs/pluggable-annotation-pipeline` — documentation describes target architecture; verify against [docs/status.md](docs/status.md) before assuming code exists.

@@ -1,0 +1,32 @@
+---
+description: Rules for handler definitions and example handlers
+globs: examples/**/*.ts,**/schematic.handlers.ts
+alwaysApply: false
+---
+Handlers are user-defined. Core only orchestrates. See `docs/handlers.md`.
+
+## AnnotationDefinition contract
+
+```typescript
+interface AnnotationDefinition {
+  type: string;           // matches @schematic.{type}(...)
+  schema: z.ZodType;      // validates parsed args + injected model/field
+  dropPriority?: number;  // higher = dropped first on removal
+  handlers: {
+    up: (input, ctx) => ({ upSql, downSql });
+    mutate?: (old, next, ctx) => ({ upSql, downSql });
+  };
+}
+```
+
+## Handler rules
+
+- Return **both** `upSql` and `downSql` from `up()` — downSql is persisted in state
+- Use idempotent SQL: `IF NOT EXISTS` / `IF EXISTS`
+- Derive deterministic object names from model + input
+- Use `ctx.databaseProvider` for provider-specific syntax
+- Do not put handler logic in `src/state/extractor.ts` or `src/generator/`
+
+## Examples belong in `examples/handlers/`
+
+Not in `src/schemas/`. The closed `src/schemas/index.ts` registry is legacy — remove when implementing registry.
