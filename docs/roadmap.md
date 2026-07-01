@@ -2,21 +2,27 @@
 
 ## Overview
 
-Schematic is a Prisma enhancement tool that adds database-provider-specific features and optimizations that Prisma doesn't natively support. It works alongside Prisma, not as a replacement.
+Schematic extends Prisma with custom database features via a pluggable annotation system. Users define Zod schemas and handlers; core handles extraction, state, diffing, and migration SQL.
 
 **Key principles:**
 
-- Prisma handles core schema (tables, columns, FKs), Schematic handles enhancements (optimized indexes, partial indexes, custom constraints)
-- Use Prisma's built-in tooling for all workflows - don't wrap or replace Prisma commands
-- Minimal CLI surface area - only add commands where absolutely necessary
+- Prisma handles core schema (tables, columns, FKs, basic indexes)
+- Schematic handles user-defined enhancements via annotations and handlers
+- Use Prisma's built-in migration workflow — don't wrap or replace Prisma commands
+- Minimal CLI surface area — `enhance` and `validate` only
+- Nothing feature-specific is hard-coded in core
 
-## Architecture
+---
+
+## Current Architecture
 
 ### Two-Phase Migration System
 
 ```
 ┌─────────────────────────────────────────────┐
 │         Prisma Schema (schema.prisma)       │
+│         + /// @schematic.* doc comments     │
+│         + schematic.handlers.ts             │
 └──────────────┬─────────────────┬────────────┘
                │                 │
          ┌─────▼──────┐    ┌─────▼──────────┐
@@ -29,15 +35,13 @@ Schematic is a Prisma enhancement tool that adds database-provider-specific feat
          │   Files    │    │   Files        │
          └─────┬──────┘    └─────┬──────────┘
                │                 │
-               ▼                 ▼
+               └────────┬────────┘
+                        ▼
          ┌──────────────────────────────────┐
          │         Database                 │
-         │                                  │
-         │ ✅ Tables (Prisma)               │
-         │ ✅ FKs (Prisma)                  │
+         │ ✅ Tables, FKs (Prisma)          │
          │ ✅ Basic indexes (Prisma)        │
-         │ ✅ FK indexes (Schematic)        │
-         │ ✅ Partial indexes (Schematic)   │
+         │ ✅ Custom features (Schematic)   │
          └──────────────────────────────────┘
 ```
 
@@ -46,556 +50,239 @@ Schematic is a Prisma enhancement tool that adds database-provider-specific feat
 #### Prisma Handles
 
 - Tables, columns, data types
-- Primary keys (`@id`, `@@id`)
-- Unique constraints (`@unique`, `@@unique`)
-- Foreign key constraints (via `@relation`)
+- Primary keys, unique constraints, foreign keys
 - Basic indexes from `@@index`
-- Default values (`@default`)
-- Enums
-- Migration history tracking
-- Client generation
+- Enums, defaults, migration history, client generation
 
 #### Schematic Handles
 
-- **Auto-optimizations (configurable):**
-  - Indexes on FK columns (opt-in via config, critical for PostgreSQL)
-  - Composite indexes for common patterns (future)
-- **Features Prisma doesn't support:**
-  - Partial indexes (`WHERE` clauses)
-  - Expression-based indexes
-  - Provider-specific index types (GIN, GIST, etc.)
-  - Complex check constraints
-  - Triggers (future)
-  - Stored procedures (future)
+- Extract `@schematic.*` annotations from DMMF documentation
+- Validate via user-provided Zod schemas
+- Generate SQL via user-provided handlers (`up` / `mutate`)
+- Track desired state in `.schematic-state.json`
+- Diff and append SQL to Prisma migration files
+- Reverse features using stored `downSql`
+
+#### User Handlers Handle
+
+- Annotation-specific validation (Zod schema)
+- SQL generation (`upSql`, `downSql`)
+- Provider-specific syntax (PostgreSQL GIN, partial indexes, etc.)
+
+---
 
 ## Workflow
 
 ### Development
 
 ```bash
-# 1. Developer modifies schema
+# 1. Modify schema and/or handlers
 vim prisma/schema.prisma
+vim schematic.handlers.ts
 
 # 2. Create migration with Prisma
-npx prisma migrate dev --create-only --name add_email
+npx prisma migrate dev --create-only --name add_partial_index
 
 # 3. Enhance migration with Schematic
 npx schematic enhance
 
-# 4. Apply with Prisma
+# 4. Apply with Prisma (updates state file via prisma generate)
 npx prisma migrate dev
 ```
 
-**What each step does:**
+**Step 3 details (`schematic enhance`):**
 
-**Step 1:** Modify your schema as normal
+- Loads baseline state from git HEAD
+- Builds current state from schema + handlers
+- Diffs to detect additions, removals, changes
+- Appends ordered SQL to the latest Prisma migration file
 
-**Step 2:** `prisma migrate dev --create-only`
+**Step 4 details (`prisma migrate dev`):**
 
-- Prisma creates migration file with schema changes
-- Creates: `migrations/20251110_add_email/migration.sql`
-- Migration not yet applied to database
-
-**Step 3:** `schematic enhance`
-
-- Reads `schema.prisma`
-- Finds FK columns needing indexes
-- Parses `@schematic.*` annotations
-- Generates SQL for enhancements
-- **Appends SQL to the migration file created in Step 2**
-
-**Step 4:** `prisma migrate dev`
-
-- Applies the enhanced migration (Prisma + Schematic SQL)
-- Runs `prisma generate` (updates state file)
-- Updates database
-
-**Result:**
-
-```
-migrations/
-  20251110123456_add_email/
-    migration.sql              # Contains BOTH Prisma + Schematic SQL
-```
-
-**Migration file contains:**
-
-```sql
--- AlterTable (Prisma-generated)
-ALTER TABLE "User" ADD COLUMN "email" TEXT;
-
--- ==========================================
--- Schematic enhancements (auto-generated)
--- Do not edit manually
--- ==========================================
-CREATE INDEX IF NOT EXISTS "Post_authorId_idx"
-  ON "Post"("authorId");
-
-CREATE INDEX IF NOT EXISTS "Post_status_active_idx"
-  ON "Post"("status")
-  WHERE "status" = 'active';
-```
+- Applies combined migration (Prisma + Schematic SQL)
+- Runs `prisma generate` → Schematic generator writes updated state file
 
 ### Production Deployment
 
-Since migration files contain both Prisma and Schematic SQL, use standard Prisma commands:
-
 ```bash
 npx prisma migrate deploy
-# Applies all migrations (includes Schematic SQL)
 ```
 
-**No Schematic wrapper needed** - migration files already contain everything.
+Migration files contain all SQL. No Schematic CLI needed in production.
+
+---
 
 ## State File
 
 ### Purpose
 
-`.schematic-state.json` tracks what Schematic should create. It's generated by the Prisma generator and consumed by the CLI.
+`.schematic-state.json` tracks every Schematic-managed feature and its reversal SQL.
 
-### What Goes In State File
-
-✅ **Include (Schematic-managed features):**
-
-- Auto-generated FK indexes
-- Partial indexes from `@schematic.*` annotations
-- Custom constraints
-- DB-specific features
-
-❌ **Don't Include (Prisma-managed features):**
-
-- Table definitions
-- Column definitions
-- Foreign key constraints
-- `@unique` indexes
-- `@@index` indexes
-- Primary keys
-- Enums
-
-### State File Schema
+### Schema
 
 ```json
 {
-	"version": "1.0.0",
-	"generatedAt": "2025-11-10T10:00:00Z",
-	"schemaHash": "abc123def456",
-
-	"indexes": [
-		{
-			"name": "Post_authorId_idx",
-			"table": "Post",
-			"columns": ["authorId"],
-			"type": "btree",
-			"source": "auto-fk-support"
-		}
-	],
-
-	"partialIndexes": [
-		{
-			"name": "Post_status_active_idx",
-			"table": "Post",
-			"columns": ["status"],
-			"where": "status = 'active'",
-			"source": "schema-annotation"
-		}
-	],
-
-	"checkConstraints": [],
-	"triggers": []
+  "version": "1",
+  "generatedAt": "2026-07-01T10:00:00.000Z",
+  "schemaHash": "abc123def456",
+  "features": [
+    {
+      "id": "a1b2c3d4...",
+      "type": "partialIndex",
+      "model": "Post",
+      "input": {
+        "columns": ["status"],
+        "where": "status = 'active'"
+      },
+      "upSql": "CREATE INDEX IF NOT EXISTS \"Post_status_partial_idx\" ON \"Post\"(\"status\") WHERE status = 'active';",
+      "downSql": "DROP INDEX IF EXISTS \"Post_status_partial_idx\";",
+      "createdAt": "2026-07-01T10:00:00.000Z"
+    }
+  ]
 }
 ```
 
-### State File Management
+### Management
 
-- ✅ **Commit to git** (like `package-lock.json`) - recommended for local storage
-- ✅ **Or store in cloud** (GCP, S3, Azure) - useful for distributed teams
-- ✅ **Regenerated on every `prisma generate`**
-- ✅ **Merge conflicts:** Just run `npx prisma generate` to regenerate
-- ✅ **CI validation:** Check hash matches schema
+- Commit to git (recommended) — like `package-lock.json`
+- Regenerated on every `prisma generate`
+- Merge conflicts: run `npx prisma generate` to regenerate
+- CI validation: `npx schematic validate`
 
-### Automatic Removal of Orphaned Features
+### Reversal
 
-When you remove an annotation or disable auto-indexing, Schematic automatically detects it:
+When an annotation is removed, `schematic enhance` emits the stored `downSql` from the git HEAD baseline. This works even if the handler is later removed from config — the state file is the source of truth for undo.
 
-**How it works:**
-
-1. `schematic enhance` loads the **previous state** (from git or cloud storage)
-2. Generates **new state** from current schema
-3. **Compares** old vs new to detect removals
-4. Generates `DROP INDEX` statements for removed features
-5. Appends to migration file
-
-**Example:**
-
-```prisma
-// Before: Had partial index
-/// @schematic.partialIndex(columns: ["status"], where: "status = 'active'")
-
-// After: Removed annotation
-// (deleted)
-```
-
-**Generated migration includes:**
-
-```sql
--- Schematic enhancements
-DROP INDEX IF EXISTS "Post_status_active_idx";
-```
-
-**Previous state is read from:**
-
-- Git history (`git show HEAD:.schematic-state.json`) for local storage
-- Cloud storage API for remote storage
-- Fallback to disk if available
-
-This ensures indexes/constraints are properly cleaned up when you change your schema.
-
-## Schema Annotations
-
-Users can define custom features via comments:
-
-```prisma
-model Post {
-  id       Int     @id @default(autoincrement())
-  authorId Int
-  author   User    @relation(fields: [authorId], references: [id])
-  // ↑ Schematic auto-adds index on authorId
-
-  status   String
-  /// @schematic.partialIndex(columns: ["status"], where: "status = 'active'")
-  // ↑ User explicitly requests partial index
-
-  title    String
-  /// @schematic.ginIndex(columns: ["title"], expression: "to_tsvector('english', title)")
-  // ↑ PostgreSQL full-text search index
-}
-```
+---
 
 ## CLI Commands
 
-Schematic provides minimal CLI commands. Most workflow uses standard Prisma commands.
-
 ### `schematic enhance`
 
-Appends Schematic-generated SQL to the most recent Prisma migration file.
-
-**Usage:**
+Appends Schematic SQL to the most recent Prisma migration file.
 
 ```bash
-# After creating migration with Prisma
-npx prisma migrate dev --create-only --name add_email
-
-# Enhance it with Schematic
 npx schematic enhance
-
-# Apply with Prisma
-npx prisma migrate dev
 ```
 
-**What it does:**
-
-- Finds the most recent migration in `prisma/migrations/`
-- Analyzes schema for FK indexes and `@schematic.*` annotations
-- Generates SQL for enhancements
-- Appends SQL to the migration file
+Run after `prisma migrate dev --create-only` and before `prisma migrate dev`.
 
 ### `schematic validate`
 
-Validates state file matches schema (for CI).
-
-**Usage:**
+Validates committed state file matches current schema.
 
 ```bash
 npx schematic validate
-# Exits 0 if valid, 1 if out of sync
 ```
 
-### `schematic diff` (future)
+---
 
-Preview what SQL would be added to a migration.
+## Completed Features
 
-**Usage:**
+### Phase 1: Core Infrastructure
 
-```bash
-npx schematic diff
-# Shows SQL that would be appended by 'enhance' command
-```
+- [x] Pluggable `AnnotationDefinition` contract (Zod schema + handler)
+- [x] Handler registry with dynamic import from generator config
+- [x] DMMF documentation extraction (model + field)
+- [x] Generic annotation parser (`@prefix.type(args)`)
+- [x] State file generation with schema hash and stable feature ids
+- [x] State file type definitions (`features[]` with stored SQL pairs)
 
-## No Introspection Approach
+### Phase 2: State Management
 
-**Decision:** Schematic does NOT introspect the database.
+- [x] State writer (persist on `prisma generate`)
+- [x] State loader (graceful null on first run)
+- [x] Git HEAD baseline loader for enhance
+- [x] State comparator (diff by feature id: added / removed / changed)
+- [x] Preserve stored `downSql` for unchanged features
 
-### Why No Introspection?
+### Phase 3: Migration Integration
 
-- **Provider complexity:** Each database has different system tables and query syntax
-- **Maintenance burden:** 80% more code for marginal benefit
-- **Simpler architecture:** Just execute idempotent SQL
-- **Standard SQL:** `CREATE INDEX IF NOT EXISTS` works everywhere
+- [x] `schematic enhance` command
+- [x] Find latest Prisma migration file
+- [x] Ordered SQL emission (drops → creates → mutations)
+- [x] Append SQL with separator comments
+- [x] Delete ordering via `dropPriority` and `createdAt`
 
-### What This Means
+### Phase 4: CLI & Validation
 
-✅ **Schematic creates everything that should exist** (idempotent)  
-✅ **Uses `IF NOT EXISTS` for safety**  
-❌ **Doesn't auto-cleanup orphaned indexes** (acceptable trade-off)
+- [x] `schematic validate` command
+- [x] Separate CLI and generator binaries
+- [x] Example handlers (partial index, GIN index, check constraint, FK index)
+- [x] Handler authoring documentation
 
-Orphaned indexes can be manually cleaned if needed. Future enhancement: optional `schematic clean` command with introspection per provider.
+### Phase 5: Documentation
 
-## Git Workflow with Multiple PRs
+- [x] README with pluggable design
+- [x] Architecture documentation
+- [x] Handler authoring guide
+- [x] Workflow and reversal guarantees documented
 
-### Scenario: Two PRs Modifying Schema
+---
 
-```
-main branch
-├── schema.prisma (3 models)
-└── .schematic-state.json (5 indexes)
+## Future Work
 
-PR #1: Add User.email          PR #2: Add Post.status
-├── schema.prisma               ├── schema.prisma
-└── .schematic-state.json       └── .schematic-state.json
-    (6 indexes)                     (7 indexes)
-```
+See [future.md](./future.md) for detailed plans.
 
-### What Happens
+### Near-term
 
-1. **PR #1 merges first** ✅
-2. **PR #2 tries to merge** → Branch out of date
-3. **PR #2 updates branch:**
+- [ ] `schematic diff` — preview SQL without modifying migration files
+- [ ] `@@schematic[...]` attribute block support (if DMMF exposes them)
+- [ ] Field-level annotation examples and edge case tests
 
-   ```bash
-   git pull origin main
-   # Merge conflict in schema.prisma (if same model edited)
-   # Merge conflict in .schematic-state.json
+### Medium-term
 
-   # Resolve schema conflicts manually
-   # Then regenerate state:
-   npx prisma generate
-
-   # State file now has BOTH changes
-   git add .schematic-state.json
-   git commit
-   ```
-
-4. **PR #2 merges** ✅
-
-### Key Points
-
-- Git prevents simultaneous merges (sequential only)
-- State file conflicts = just regenerate
-- State file is derived from schema (source of truth)
-- Similar to resolving `package-lock.json` conflicts
-
-## Safety Considerations
-
-### State File Missing
-
-**Problem:** Without state file, Schematic doesn't know what it manages.
-
-**Safeguards:**
-
-1. ✅ **Commit state file to git** (primary defense)
-2. ✅ **Error if state file missing** (don't operate blind)
-3. ✅ **Never drop unmarked objects** (future: mark managed objects in DB)
-
-### Migration Failures
-
-**Problem:** Schematic migration fails after Prisma succeeds.
-
-**Mitigations:**
-
-- Use idempotent SQL (`IF NOT EXISTS`)
-- Can safely retry: `npx schematic migrate dev`
-- Both migrations in transaction (Prisma applies both)
-- Clear error messages about which step failed
-
-## Implementation Phases
-
-### Phase 1: Core Infrastructure (MVP)
-
-- [ ] State file generation from schema
-- [ ] FK column detection and auto-indexing
-- [ ] Schema hash validation
-- [ ] State file type definitions
-
-### Phase 2: CLI - Enhance Command
-
-- [ ] `schematic enhance` command
-- [ ] Find most recent migration file
-- [ ] Load previous state file (from disk or git)
-- [ ] Generate new state from current schema
-- [ ] Compare old vs new state (detect additions/removals)
-- [ ] Generate SQL for new indexes/constraints (CREATE)
-- [ ] Generate SQL for removed indexes/constraints (DROP)
-- [ ] Append Schematic SQL to migration file
-- [ ] Clear separation comments in migration file
-- [ ] Update state file on disk
-
-### Phase 3: Schema Annotations
-
-- [ ] Parse Prisma schema comments
-- [ ] Support `@schematic.partialIndex(...)`
-- [ ] Support `@schematic.check(...)`
-- [ ] Merge annotations with auto-features
-
-### Phase 4: SQL Generation
-
-- [ ] Generate idempotent index SQL (`IF NOT EXISTS`)
-- [ ] Provider-specific SQL (PostgreSQL, MySQL, SQLite)
-- [ ] Support `CONCURRENTLY` (PostgreSQL)
-- [ ] Constraint SQL generation
-
-### Phase 5: Validation & Tooling
-
-- [ ] `schematic validate` command
-- [ ] CI/CD examples
-- [ ] Error handling and recovery
-- [ ] Comprehensive logging
-
-### Phase 6: Advanced Features
-
-- [ ] `schematic diff` (preview changes)
-- [ ] Expression-based indexes
-- [ ] GIN/GIST indexes (PostgreSQL)
-- [ ] Configurable auto-indexing rules
-- [ ] Check constraints
-
-### Phase 7: Cloud State Storage
-
-- [ ] Support remote state storage
-- [ ] GCP Cloud Storage backend
-- [ ] AWS S3 backend (future)
-- [ ] Azure Blob Storage backend (future)
-- [ ] Configuration for remote state
-- [ ] Fallback to local state if remote unavailable
+- [ ] Cloud state storage (GCP, S3, Azure)
 - [ ] State locking for concurrent operations
+- [ ] Optional `schematic clean` with per-provider introspection
+- [ ] VSCode extension for annotation autocomplete
 
-**Configuration:**
+### Long-term
 
-```prisma
-generator schematic {
-  provider      = "schematic"
-  stateStorage  = "gcp"  // "local" | "gcp" | "s3" | "azure"
-  stateBucket   = "my-bucket-name"
-  stateKey      = "project/schematic-state.json"
-}
-```
+- [ ] Triggers and stored procedures as example handlers
+- [ ] Web UI for migration preview
+- [ ] Schema migration history comparison
 
-### Phase 8: Optional Introspection
-
-- [ ] `schematic clean` command
-- [ ] Per-provider introspection
-- [ ] Orphaned index detection
-- [ ] Drift detection
-
-### Phase 9: Documentation & Polish
-
-- [ ] README with setup guide
-- [ ] Example schemas
-- [ ] Migration guide
-- [ ] Best practices
-- [ ] Troubleshooting guide
+---
 
 ## Technical Decisions
 
-### Why Append to Prisma's Migration File?
+### Why pluggable handlers instead of built-in annotation types?
 
-**Considered:**
+Different projects need different database features. Hard-coding partial indexes, GIN indexes, etc. in core would require maintaining provider-specific logic for every feature. A registry-driven design lets users define exactly what they need.
 
-1. **Append to Prisma's migration file** ✅
-2. Separate `schematic.sql` in same folder
-3. Separate migration folder
+### Why persist downSql in state?
 
-**Chosen:** Append to same migration file because:
+When a handler is removed from config, Schematic still needs to reverse already-applied features. Storing `downSql` at creation time makes the committed state file the authoritative undo record — no handler required at removal time.
 
-- **Official Prisma workflow** for [unsupported features](https://www.prisma.io/docs/orm/prisma-migrate/workflows/unsupported-database-features)
+### Why git HEAD baseline for enhance?
+
+Workflow order is: create migration → enhance → apply (which runs generate). If enhance used the post-generate disk state, removals would lose their stored `downSql` before enhance could emit it.
+
+### Why append to Prisma's migration file?
+
+- Official Prisma workflow for [unsupported features](https://www.prisma.io/docs/orm/prisma-migrate/workflows/unsupported-database-features)
 - Single migration = single transaction = atomicity
-- Clear comments separate Prisma vs Schematic SQL
 - Standard `--create-only` workflow
-- Single migration history entry
-- No duplicate migrations or timing issues
+- No duplicate migration history entries
 
-### Why Commit State File?
+### Why no introspection?
 
-**Alternative:** `.gitignore` the state file
+- 80% less code for marginal benefit in v1
+- Idempotent SQL (`IF NOT EXISTS`) is sufficient
+- State file diffing handles additions and removals
+- Can add optional introspection later (`schematic clean`)
 
-**Chosen:** Commit it (or store in cloud) because:
-
-- Can review changes in PRs
-- Deterministic (same schema = same state)
-- CI can validate
-- No surprises in production
-- Similar to `package-lock.json`
-- Enables automatic removal of orphaned indexes
-
-### Cloud State Storage vs Git
-
-**Local (Git-committed):**
-
-- ✅ Simple - no additional infrastructure
-- ✅ Version history built-in
-- ✅ Works offline
-- ⚠️ State file in every commit
-- ⚠️ Merge conflicts possible
-
-**Cloud (GCP/S3/Azure):**
-
-- ✅ Centralized state for distributed teams
-- ✅ No merge conflicts
-- ✅ State locking for concurrent operations
-- ✅ Keeps git history cleaner
-- ⚠️ Requires cloud credentials
-- ⚠️ Network dependency
-- ⚠️ Additional cost
-
-**Recommendation:** Start with git-committed, add cloud storage later if needed for large teams.
-
-### Why No Introspection Initially?
-
-**Alternative:** Introspect DB and compute diff
-
-**Chosen:** Skip introspection because:
-
-- Much simpler (80% less code)
-- Provider-agnostic
-- Idempotent SQL is sufficient
-- Orphaned indexes rarely problematic
-- Can add later as optional feature
-
-### Why Wrapper Commands?
-
-**Alternative:** Manual two-step process
-
-**Chosen:** Wrapper commands because:
-
-- Better UX (one command)
-- Can't forget to apply Schematic changes
-- All changes in one migration
-- Atomic application
+---
 
 ## Success Metrics
 
-**MVP is successful when:**
+**v1.0 achieved:**
 
-- ✅ Auto-indexes FK columns on PostgreSQL
-- ✅ Generates state file from schema
-- ✅ One command creates + applies migrations
-- ✅ Works with standard Prisma workflow
-- ✅ State file commits cleanly to git
-
-**v1.0 is successful when:**
-
-- ✅ All Phase 1-5 features complete
-- ✅ Supports partial indexes via annotations
-- ✅ Works on PostgreSQL, MySQL, SQLite
-- ✅ Comprehensive documentation
-- ✅ CI validation examples
-
-## Future Enhancements
-
-- Custom validation rules
-- Stored procedures and functions
-- Triggers
-- Custom types
-- Advanced constraint types
-- Schema migration history comparison
-- Web UI for migration preview
-- VSCode extension for annotation autocomplete
+- Users define custom annotation types via Zod + handler
+- Core has zero hard-coded feature logic
+- `prisma generate` writes state file with stored SQL pairs
+- `schematic enhance` diffs and appends migration SQL
+- Removals work via stored `downSql`, even without handler
+- Example handlers cover common PostgreSQL patterns
+- CI validation via `schematic validate`

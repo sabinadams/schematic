@@ -1,0 +1,35 @@
+---
+description: Schematic core design rules — pluggable handlers, no hard-coded features
+alwaysApply: true
+---
+Schematic is a pluggable Prisma annotation pipeline. Read `AGENTS.md` and `docs/status.md` before coding.
+
+## Must follow
+
+- **No hard-coded annotation types in core** — features live in user handlers or `examples/handlers/`
+- **Annotations from DMMF `documentation`** — model and field doc comments; not custom per-handler locate functions
+- **Persist `downSql` in state at creation** — reversals use stored SQL, not re-invoked handlers
+- **`enhance` baselines git HEAD state** — not post-generate disk state
+- **Preserve stored SQL for unchanged feature ids** — do not re-call `handler.up()` on unchanged entries
+
+## Code style
+
+- Functional, small files, pure functions
+- Minimal diff scope — no drive-by refactors
+- Match existing naming and import patterns (`@/` aliases)
+
+## Documentation upkeep
+
+Update docs in the **same PR** as code. See AGENTS.md "Documentation maintenance" for the full table.
+
+- **`docs/status.md`** — always when implementation changes
+- **`AGENTS.md` + `docs/agent-rules/`** — when philosophy, practices, or agent workflow changes
+- **`docs/plan.md`, `architecture.md`, `handlers.md`, `README.md`** — when your change affects what they describe
+- **Do not** mark roadmap complete without code + status.md
+- **Do not** document unimplemented features as shipped
+
+## Before claiming done
+
+- Update `docs/status.md` with what is actually implemented
+- Update other affected docs (see above)
+- Do not mark roadmap items complete without code + status update

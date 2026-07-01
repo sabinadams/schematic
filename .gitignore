@@ -9,6 +9,9 @@ generated/
 .env
 .env.local
 
+# Claude Code local overrides (personal, not shared)
+CLAUDE.local.md
+
 # IDE
 .vscode/
 .idea/
