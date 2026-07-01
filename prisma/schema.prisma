@@ -12,7 +12,6 @@ generator schematic {
 
 datasource db {
     provider = "sqlite"
-    url      = "file:./dev.db"
 }
 
 /// @schematic.index(name: "test", fields: ["email"], where: "email IS NOT NULL")

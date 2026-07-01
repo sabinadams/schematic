@@ -249,7 +249,7 @@ describe('parseAnnotation', () => {
 
 		it('should handle mixed quote types', () => {
 			const result = parseAnnotation(
-				`@schematic.check(name: "check", expression: "value = 'test'")`,
+				'@schematic.check(name: "check", expression: "value = \'test\'")',
 				'schematic'
 			);
 
@@ -353,7 +353,7 @@ describe('parseAnnotation', () => {
 
 		it('should handle PostgreSQL function calls', () => {
 			const result = parseAnnotation(
-				`@schematic.ginIndex(columns: ["content"], expression: "to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(content, ''))")`,
+				"@schematic.ginIndex(columns: [\"content\"], expression: \"to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(content, ''))\")",
 				'schematic'
 			);
 
@@ -382,7 +382,7 @@ describe('parseAnnotation', () => {
 
 		it('should handle JSONB expressions', () => {
 			const result = parseAnnotation(
-				`@schematic.ginIndex(columns: ["data"], expression: "data->>'tags'")`,
+				'@schematic.ginIndex(columns: ["data"], expression: "data->>\'tags\'")',
 				'schematic'
 			);
 
@@ -432,7 +432,7 @@ describe('parseAnnotation', () => {
 
 		it('should handle CASE expressions', () => {
 			const result = parseAnnotation(
-				`@schematic.check(name: "status_check", expression: "CASE WHEN status = 'active' THEN priority > 0 ELSE true END")`,
+				'@schematic.check(name: "status_check", expression: "CASE WHEN status = \'active\' THEN priority > 0 ELSE true END")',
 				'schematic'
 			);
 

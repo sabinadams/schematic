@@ -1,7 +1,6 @@
 const eslintConfigPrettier = require('eslint-config-prettier');
 const prettierPlugin = require('eslint-plugin-prettier');
 const typescript = require('@typescript-eslint/parser');
-const sortKeysFix = require('eslint-plugin-sort-keys-fix');
 
 module.exports = [
   {
@@ -25,7 +24,6 @@ module.exports = [
     plugins: {
       '@typescript-eslint': require('@typescript-eslint/eslint-plugin'),
       prettier: prettierPlugin,
-      'sort-keys-fix': sortKeysFix,
     },
     rules: {
       ...eslintConfigPrettier.rules,
@@ -48,7 +46,6 @@ module.exports = [
       ],
       quotes: ['error', 'single', { avoidEscape: true }],
       semi: ['error', 'always'],
-      'sort-keys-fix/sort-keys-fix': 'error',
     },
   },
 ];

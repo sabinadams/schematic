@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import extractConfigFromSchema from '@/generator/config';
 import { SchematicGeneratorOptions } from '@/types/prisma.types';
+import { createMockDataSource } from '@/test/mock-datasource';
 
 describe('extractConfigFromSchema', () => {
 	const createMockOptions = (
@@ -23,15 +24,7 @@ describe('extractConfigFromSchema', () => {
 				otherOperations: { write: [], read: [] },
 			},
 		},
-		datasources: [
-			// @ts-expect-error - Mocking the datasource
-			{
-				name: 'db',
-				provider: 'postgresql',
-				activeProvider: 'postgresql',
-				url: { fromEnvVar: null, value: 'postgresql://localhost:5432/test' },
-			},
-		],
+		datasources: [createMockDataSource('postgresql')],
 		// @ts-expect-error - Mocking the generator
 		generator: {
 			name: 'schematic',
@@ -170,14 +163,9 @@ describe('extractConfigFromSchema', () => {
 		providers.forEach((provider) => {
 			const options = createMockOptions({
 				datasources: [
-					{
-						name: 'db',
-						// @ts-expect-error - Mocking the datasource
-						provider,
-						// @ts-expect-error - Mocking the datasource
-						activeProvider: provider,
-						url: { fromEnvVar: null, value: `${provider}://localhost` },
-					},
+					createMockDataSource(
+						provider as Parameters<typeof createMockDataSource>[0]
+					),
 				],
 			});
 
@@ -189,20 +177,8 @@ describe('extractConfigFromSchema', () => {
 	it('should use first datasource when multiple are provided', () => {
 		const options = createMockOptions({
 			datasources: [
-				// @ts-expect-error - Mocking the datasource
-				{
-					name: 'db1',
-					provider: 'postgresql',
-					activeProvider: 'postgresql',
-					url: { fromEnvVar: null, value: 'postgresql://localhost:5432/test' },
-				},
-				// @ts-expect-error - Mocking the datasource
-				{
-					name: 'db2',
-					provider: 'mysql',
-					activeProvider: 'mysql',
-					url: { fromEnvVar: null, value: 'mysql://localhost:3306/test' },
-				},
+				createMockDataSource('postgresql', 'db1'),
+				createMockDataSource('mysql', 'db2'),
 			],
 		});
 

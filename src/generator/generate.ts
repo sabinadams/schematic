@@ -1,7 +1,5 @@
-import { GeneratorOptions } from '@prisma/generator-helper';
 import { logger } from '@prisma/internals';
 import fs from 'fs/promises';
-import { resolveAndLoadFile, resolveFilePath } from '@/utils/file.utils';
 import { SchematicGeneratorOptions } from '@/types/prisma.types';
 import extractConfigFromSchema from './config';
 import loadState from '@/state/loader';
